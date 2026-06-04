@@ -1,5 +1,5 @@
 #!/bin/sh
-# Railway unified: FastAPI (internal) + Next.js (PORT). Uses Railway Variables (OPENAI_API_KEY, DATABASE_URL).
+# Railway unified: FastAPI (internal) + Next.js standalone (PORT).
 set -e
 
 WEB_PORT="${PORT:-3000}"
@@ -30,30 +30,15 @@ else
 fi
 echo "[unified] OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}"
 
-case "${OPENAI_API_KEY:-}" in
-  sk-ant*)
-    echo "[unified] WARNING: OPENAI_API_KEY looks like Anthropic (sk-ant-). Use an OpenAI key (sk-...)."
-    ;;
-esac
-
-if [ -z "${OPENAI_API_KEY:-}" ]; then
-  echo "[unified] WARNING: OPENAI_API_KEY is empty - conversions run in mock mode"
-  echo "[unified]   Railway -> this service -> Variables -> OPENAI_API_KEY -> Redeploy"
-fi
-
 wait_for_api() {
   curl -sf "http://127.0.0.1:${API_PORT}/health" >/dev/null 2>&1
 }
 
-start_api() {
-  python -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}" --workers 1 --timeout-keep-alive 75 &
-  echo $!
-}
-
+# Start API in main shell (avoid $(...) subshell killing background uvicorn)
 echo "[unified] starting FastAPI in background..."
-API_PID="$(start_api)"
+python -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}" --workers 1 --timeout-keep-alive 75 &
+API_PID=$!
 
-# Warm API without blocking web bind (Railway healthcheck uses /health/live)
 (
   i=0
   while [ "$i" -lt 120 ]; do
@@ -63,7 +48,8 @@ API_PID="$(start_api)"
     fi
     if ! kill -0 "${API_PID}" 2>/dev/null; then
       echo "[unified] FastAPI exited during startup — restarting (attempt $i)"
-      API_PID="$(start_api)"
+      python -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}" --workers 1 --timeout-keep-alive 75 &
+      API_PID=$!
     fi
     i=$((i + 1))
     sleep 1
@@ -73,13 +59,13 @@ API_PID="$(start_api)"
   fi
 ) &
 
-# Keep API alive while Next.js runs (OOM/crash recovery)
 (
   while true; do
     sleep 15
     if ! kill -0 "${API_PID}" 2>/dev/null; then
       echo "[unified] FastAPI not running — restarting"
-      API_PID="$(start_api)"
+      python -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}" --workers 1 --timeout-keep-alive 75 &
+      API_PID=$!
       j=0
       while [ "$j" -lt 30 ]; do
         if wait_for_api; then
@@ -95,20 +81,14 @@ API_PID="$(start_api)"
   done
 ) &
 
-echo "[unified] starting Next.js on 0.0.0.0:${WEB_PORT} (Railway healthcheck -> /health/live)"
-cd /app/frontend
-
-if [ ! -d .next ]; then
-  echo "[unified] ERROR: missing .next build output in /app/frontend"
-  ls -la . 2>/dev/null || true
+echo "[unified] starting Next.js standalone on 0.0.0.0:${WEB_PORT} (health -> /health/live)"
+if [ ! -f /app/web/server.js ]; then
+  echo "[unified] ERROR: missing /app/web/server.js (standalone build)"
+  ls -la /app/web 2>/dev/null || true
   exit 1
 fi
 
-if [ ! -f ./node_modules/next/dist/bin/next ]; then
-  echo "[unified] ERROR: next binary missing — run npm ci on target platform (see Dockerfile.unified)"
-  exit 1
-fi
-
+cd /app/web
 export PORT="${WEB_PORT}"
 export HOSTNAME=0.0.0.0
-exec npm run start
+exec node server.js

@@ -1,7 +1,7 @@
 # All-in-one: FastAPI (internal 8091) + Next.js (PORT) for a single Railway service.
 # Config: /railway.toml
 #
-# Use Debian-based Node for web build AND runtime npm ci (Alpine node_modules break on python:3.12-slim).
+# Web: Next standalone (bookworm build). API: Python on same image.
 
 FROM python:3.12-slim AS pydeps
 WORKDIR /app
@@ -32,12 +32,9 @@ COPY --from=pydeps /usr/local/bin /usr/local/bin
 COPY app ./app
 COPY migrations ./migrations
 COPY scripts ./scripts
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-WORKDIR /app/frontend
-RUN npm ci --omit=dev
-COPY --from=webbuild /app/.next ./.next
-COPY --from=webbuild /app/public ./public
-WORKDIR /app
+COPY --from=webbuild /app/.next/standalone ./web
+COPY --from=webbuild /app/.next/static ./web/.next/static
+COPY --from=webbuild /app/public ./web/public
 COPY scripts/start-unified.sh /app/start.sh
 RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 ENV PYTHONUNBUFFERED=1
