@@ -15,6 +15,35 @@ class HealthResponse(BaseModel):
     railway: bool = False
     openai_configured: bool = False
     postgres_enabled: bool = False
+    saas_enabled: bool = False
+
+
+class TenantMeResponse(BaseModel):
+    tenant_id: UUID
+    name: str
+    slug: str
+    plan: str
+    plan_label: str
+    period: str
+    conversions_used: int
+    conversions_limit: int | None
+    prompt_tokens: int
+    completion_tokens: int
+    max_source_bytes: int | None
+
+
+class CreateTenantRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    plan: str = "free"
+
+
+class CreateTenantResponse(BaseModel):
+    tenant_id: UUID
+    slug: str
+    plan: str
+    api_key: str
+    message: str = "Store the API key securely; it is shown only once."
 
 
 class DirectionInfo(BaseModel):

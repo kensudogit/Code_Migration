@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     openai_chunk_chars: int = 12_000
     api_host: str = "0.0.0.0"
     api_port: int = 8090
+    # SaaS multi-tenant
+    saas_enabled: bool = False
+    saas_require_api_key: bool = False
+    saas_admin_secret: str = ""
+    saas_default_tenant_name: str = "Default"
+    saas_default_tenant_slug: str = "default"
+    saas_default_tenant_plan: str = "free"
+    saas_bootstrap_api_key: str = ""
 
     @model_validator(mode="after")
     def apply_platform_env(self) -> "Settings":
@@ -114,7 +122,12 @@ class Settings(BaseSettings):
             "openai_max_output_tokens": self.openai_max_output_tokens,
             "openai_max_output_tokens_effective": self.openai_max_output_tokens_effective,
             "openai_model_output_cap": self.openai_model_output_cap,
+            "saas_enabled": self.saas_enabled,
+            "saas_require_api_key": self.saas_require_api_key,
         }
+        if self.saas_enabled:
+            out["saas_default_tenant_slug"] = self.saas_default_tenant_slug
+            out["saas_plans"] = ["free", "pro", "enterprise"]
         if self.openai_max_output_tokens > self.openai_max_output_tokens_effective:
             out["openai_max_output_tokens_warning"] = (
                 f"OPENAI_MAX_OUTPUT_TOKENS={self.openai_max_output_tokens} exceeds "

@@ -1,3 +1,4 @@
+import { saasAuthHeaders } from '@/lib/saas'
 import type {
   ConvertResponse,
   DirectionId,
@@ -5,6 +6,7 @@ import type {
   HealthResponse,
   JobDetail,
   JobSummary,
+  TenantMeResponse,
 } from './types'
 
 const BASE = '/api/v1'
@@ -62,6 +64,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        ...saasAuthHeaders(),
         ...init?.headers,
       },
     })
@@ -77,6 +80,10 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getHealth() {
   return fetchJson<HealthResponse>('/health')
+}
+
+export function getTenantMe() {
+  return fetchJson<TenantMeResponse>('/saas/me')
 }
 
 export function getDirections() {

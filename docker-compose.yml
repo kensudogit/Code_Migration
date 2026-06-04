@@ -35,6 +35,10 @@ services:
       OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-16384}
       API_HOST: 0.0.0.0
       API_PORT: 8090
+      SAAS_ENABLED: ${SAAS_ENABLED:-true}
+      SAAS_REQUIRE_API_KEY: ${SAAS_REQUIRE_API_KEY:-false}
+      SAAS_ADMIN_SECRET: ${SAAS_ADMIN_SECRET:-change-me-admin-secret}
+      SAAS_DEFAULT_TENANT_SLUG: ${SAAS_DEFAULT_TENANT_SLUG:-default}
     depends_on:
       postgres:
         condition: service_healthy

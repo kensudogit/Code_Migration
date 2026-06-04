@@ -21,6 +21,22 @@ export type HealthResponse = {
   ai_enabled: boolean
   railway?: boolean
   openai_configured?: boolean
+  postgres_enabled?: boolean
+  saas_enabled?: boolean
+}
+
+export type TenantMeResponse = {
+  tenant_id: string
+  name: string
+  slug: string
+  plan: string
+  plan_label: string
+  period: string
+  conversions_used: number
+  conversions_limit: number | null
+  prompt_tokens: number
+  completion_tokens: number
+  max_source_bytes: number | null
 }
 
 export type TokenUsage = {

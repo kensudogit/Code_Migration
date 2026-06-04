@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app import repository
 from app.api.routes import router
+from app.api.saas_routes import router as saas_router
 from app.config import settings
 from app.db import close_pool, init_pool, ping
 from app.migrate import apply_migrations
@@ -23,6 +24,9 @@ def _init_postgres_background() -> None:
     try:
         init_pool()
         apply_migrations()
+        from app.saas import bootstrap as saas_bootstrap
+
+        saas_bootstrap.ensure_default_tenant()
         stale = repository.fail_stale_running_jobs()
         if stale:
             logger.info("Marked %s stale running job(s) as failed", stale)
@@ -62,6 +66,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api/v1")
+app.include_router(saas_router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)

@@ -18,6 +18,7 @@ import { ui } from '@/lib/ui'
 import { DirectionRemoteModal } from '@/components/DirectionRemoteModal'
 import { EditorWorkspace } from '@/components/EditorWorkspace'
 import { HistoryPanel } from '@/components/HistoryPanel'
+import { SaaSPanel } from '@/components/SaaSPanel'
 import { StatusPills } from '@/components/StatusPills'
 import { FloatingGuidePanel } from '@/components/FloatingGuidePanel'
 
@@ -129,7 +130,10 @@ export function MigrationStudio() {
                 <p className="text-sm text-slate-500 m-0 mt-0.5">{ui.appSubtitle}</p>
               </div>
             </div>
-            <StatusPills health={health} mockMode={mockMode && !!result} />
+            <div className="flex flex-wrap items-center gap-2">
+              <SaaSPanel />
+              <StatusPills health={health} mockMode={mockMode && !!result} />
+            </div>
           </div>
         </div>
       </header>

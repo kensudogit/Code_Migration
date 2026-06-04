@@ -26,12 +26,14 @@ def create_job(
     source_code: str,
     *,
     model: str | None = None,
+    tenant_id: UUID | None = None,
 ) -> UUID:
     return create_job_with_id(
         None,
         direction,
         source_code,
         model=model,
+        tenant_id=tenant_id,
     )
 
 
@@ -41,6 +43,7 @@ def create_job_with_id(
     source_code: str,
     *,
     model: str | None = None,
+    tenant_id: UUID | None = None,
 ) -> UUID:
     stored_source = _clip_for_db(source_code, label="source")
     with get_conn() as conn:
@@ -48,8 +51,8 @@ def create_job_with_id(
             row = conn.execute(
                 """
                 INSERT INTO conversion_jobs
-                    (source_language, target_language, direction, source_code, status, model)
-                VALUES (%s, %s, %s, %s, 'running', %s)
+                    (source_language, target_language, direction, source_code, status, model, tenant_id)
+                VALUES (%s, %s, %s, %s, 'running', %s, %s)
                 RETURNING id
                 """,
                 (
@@ -58,14 +61,15 @@ def create_job_with_id(
                     direction.value,
                     stored_source,
                     model,
+                    tenant_id,
                 ),
             ).fetchone()
         else:
             row = conn.execute(
                 """
                 INSERT INTO conversion_jobs
-                    (id, source_language, target_language, direction, source_code, status, model)
-                VALUES (%s, %s, %s, %s, %s, 'running', %s)
+                    (id, source_language, target_language, direction, source_code, status, model, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, 'running', %s, %s)
                 RETURNING id
                 """,
                 (
@@ -75,6 +79,7 @@ def create_job_with_id(
                     direction.value,
                     stored_source,
                     model,
+                    tenant_id,
                 ),
             ).fetchone()
         conn.commit()
@@ -152,27 +157,46 @@ def fail_stale_running_jobs(message: str = "Server restarted during conversion")
         return cur.rowcount
 
 
-def list_jobs(limit: int = 50) -> list[dict]:
+def list_jobs(limit: int = 50, *, tenant_id: UUID | None = None) -> list[dict]:
     with get_conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, direction, source_language, target_language, status, model,
-                   created_at, completed_at, prompt_tokens, completion_tokens
-            FROM conversion_jobs
-            ORDER BY created_at DESC
-            LIMIT %s
-            """,
-            (limit,),
-        ).fetchall()
+        if tenant_id is not None:
+            rows = conn.execute(
+                """
+                SELECT id, direction, source_language, target_language, status, model,
+                       created_at, completed_at, prompt_tokens, completion_tokens
+                FROM conversion_jobs
+                WHERE tenant_id = %s
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (tenant_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, direction, source_language, target_language, status, model,
+                       created_at, completed_at, prompt_tokens, completion_tokens
+                FROM conversion_jobs
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            ).fetchall()
         return list(rows)
 
 
-def get_job(job_id: UUID) -> dict | None:
+def get_job(job_id: UUID, *, tenant_id: UUID | None = None) -> dict | None:
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM conversion_jobs WHERE id = %s",
-            (job_id,),
-        ).fetchone()
+        if tenant_id is not None:
+            row = conn.execute(
+                "SELECT * FROM conversion_jobs WHERE id = %s AND tenant_id = %s",
+                (job_id, tenant_id),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM conversion_jobs WHERE id = %s",
+                (job_id,),
+            ).fetchone()
         if row is None:
             return None
         data = dict(row)

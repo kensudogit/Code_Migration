@@ -33,6 +33,10 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   const headers = new Headers()
   const contentType = req.headers.get('content-type')
   if (contentType) headers.set('Content-Type', contentType)
+  const apiKey = req.headers.get('x-api-key')
+  if (apiKey) headers.set('X-API-Key', apiKey)
+  const auth = req.headers.get('authorization')
+  if (auth) headers.set('Authorization', auth)
 
   const init: RequestInit & { duplex?: 'half' } = {
     method: req.method,

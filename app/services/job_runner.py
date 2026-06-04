@@ -27,6 +27,7 @@ class RuntimeJob:
     source_code: str
     status: str
     created_at: datetime
+    tenant_id: UUID | None = None
     model: str | None = None
     result_code: str | None = None
     error_message: str | None = None
@@ -97,7 +98,7 @@ def _row_to_dict(row: dict, *, include_source: bool) -> dict:
     return data
 
 
-def enqueue(body: ConvertRequest) -> UUID:
+def enqueue(body: ConvertRequest, *, tenant_id: UUID | None = None) -> UUID:
     """Register job in memory and return id immediately (no DB write yet)."""
     direction = _resolve_direction(body)
     model_name = settings.openai_model if settings.ai_enabled else "mock"
@@ -108,6 +109,7 @@ def enqueue(body: ConvertRequest) -> UUID:
         source_code=body.source_code,
         status="running",
         created_at=datetime.now(timezone.utc),
+        tenant_id=tenant_id,
         model=model_name,
         progress="Queued…",
     )
@@ -131,6 +133,7 @@ async def execute(job_id: UUID, *, save_history: bool) -> None:
                 job.direction,
                 job.source_code,
                 model=job.model,
+                tenant_id=job.tenant_id,
             )
         except Exception as exc:
             logger.warning("create_job_with_id failed for %s: %s", job_id, exc)
@@ -204,10 +207,21 @@ async def start(body: ConvertRequest) -> UUID:
     return enqueue(body)
 
 
-def get_job(job_id: UUID, *, include_source: bool = False) -> dict | None:
+def get_job(
+    job_id: UUID,
+    *,
+    include_source: bool = False,
+    tenant_id: UUID | None = None,
+) -> dict | None:
     """Merged view: in-memory state wins when it has reached a terminal status."""
     mem = _MEMORY.get(job_id)
-    row = repository.get_job(job_id) if settings.postgres_enabled else None
+    if mem is not None and tenant_id is not None and mem.tenant_id != tenant_id:
+        return None
+    row = (
+        repository.get_job(job_id, tenant_id=tenant_id)
+        if settings.postgres_enabled
+        else None
+    )
 
     if mem is None and row is None:
         return None
