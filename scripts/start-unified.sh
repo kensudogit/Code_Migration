@@ -38,32 +38,30 @@ if [ -z "${OPENAI_API_KEY:-}" ]; then
   echo "[unified]   Railway -> this service -> Variables -> OPENAI_API_KEY -> Redeploy"
 fi
 
-echo "[unified] starting FastAPI..."
+echo "[unified] starting FastAPI (background)..."
 python -m uvicorn app.main:app --host 0.0.0.0 --port "${API_PORT}" &
 API_PID=$!
 
-ready=0
-i=0
-while [ "$i" -lt 120 ]; do
-  if curl -sf "http://127.0.0.1:${API_PORT}/health" >/dev/null 2>&1; then
-    ready=1
-    break
-  fi
-  if ! kill -0 "$API_PID" 2>/dev/null; then
-    echo "[unified] ERROR: FastAPI exited before becoming ready"
-    wait "$API_PID" 2>/dev/null || true
-    exit 1
-  fi
-  i=$((i + 1))
-  sleep 0.5
-done
+# Wait for API in background only — Railway /health hits Next on $PORT, not this port.
+(
+  i=0
+  while [ "$i" -lt 60 ]; do
+    if curl -sf "http://127.0.0.1:${API_PORT}/health" >/dev/null 2>&1; then
+      echo "[unified] API ready on 127.0.0.1:${API_PORT}"
+      exit 0
+    fi
+    if ! kill -0 "$API_PID" 2>/dev/null; then
+      echo "[unified] WARNING: FastAPI exited early (UI will lack backend until fixed)"
+      exit 0
+    fi
+    i=$((i + 1))
+    sleep 0.5
+  done
+  echo "[unified] WARNING: API not ready within 30s (continuing; check DATABASE_URL / logs)"
+) &
 
-if [ "$ready" -ne 1 ]; then
-  echo "[unified] ERROR: FastAPI not ready on 127.0.0.1:${API_PORT}"
-  kill "$API_PID" 2>/dev/null || true
-  exit 1
-fi
-
-echo "[unified] API ready; starting Next.js on ${WEB_PORT}"
+echo "[unified] starting Next.js on 0.0.0.0:${WEB_PORT} (Railway healthcheck -> /health)"
 cd /app/frontend
-PORT="${WEB_PORT}" HOSTNAME=0.0.0.0 exec npm start
+export PORT="${WEB_PORT}"
+export HOSTNAME=0.0.0.0
+exec npx next start --hostname 0.0.0.0 --port "${WEB_PORT}"

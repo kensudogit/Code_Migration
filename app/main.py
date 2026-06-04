@@ -68,11 +68,10 @@ def root():
 
 @app.get("/health")
 def railway_health():
-    """Railway healthcheck for API-only deploy."""
+    """Liveness probe (no DB) ? used by start-unified.sh and API-only Railway deploy."""
     return {
         "ok": True,
         "service": "code-migration-api",
-        "postgres": ping(),
         "postgres_enabled": settings.postgres_enabled,
         "ai_enabled": settings.ai_enabled,
     }
