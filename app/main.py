@@ -1,4 +1,5 @@
-"""Code Migration API  AI code conversion (Java / Python / TypeScript / COBOL)."""
+"""Code Migration API - AI code conversion (Java / Python / TypeScript / COBOL)."""
+
 
 from contextlib import asynccontextmanager
 
@@ -22,7 +23,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Code Migration API",
     description=(
-        "AI-powered code conversion: Java ? Python, Java ? TypeScript, COBOL ? Java. "
+        "AI-powered code conversion: Java -> Python, Java -> TypeScript, COBOL -> Java. "
         "History stored in PostgreSQL."
     ),
     version="1.0.0",
