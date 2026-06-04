@@ -347,7 +347,7 @@ async def _convert_single(
         "model": model,
         "messages": messages,
         "temperature": 0.2,
-        "max_tokens": settings.openai_max_output_tokens,
+        "max_tokens": settings.openai_max_output_tokens_effective,
     }
 
     last_error: Exception | None = None

@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.services.openai_limits import clamp_max_output_tokens, model_output_token_cap
 from app.railway import (
     LOCAL_DATABASE_URL,
     env_presence,
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     openai_base_url: str = ""
     openai_timeout: float = 300.0
     openai_max_retries: int = 2
-    openai_max_output_tokens: int = 32768
+    openai_max_output_tokens: int = 16384
     # 0 = no application-level cap on conversion source size
     source_code_max_bytes: int = 0
     # Split large sources across multiple OpenAI calls (line-safe chunks)
@@ -74,6 +75,15 @@ class Settings(BaseSettings):
         return bool(self.openai_api_key.strip())
 
     @property
+    def openai_max_output_tokens_effective(self) -> int:
+        """Requested max_tokens capped to the active model's completion limit."""
+        return clamp_max_output_tokens(self.openai_model, self.openai_max_output_tokens)
+
+    @property
+    def openai_model_output_cap(self) -> int:
+        return model_output_token_cap(self.openai_model)
+
+    @property
     def postgres_enabled(self) -> bool:
         url = self.database_url.strip()
         if not url:
@@ -101,7 +111,15 @@ class Settings(BaseSettings):
             "source_unlimited": self.source_code_max_bytes <= 0,
             "openai_auto_chunk": self.openai_auto_chunk,
             "openai_chunk_chars": self.openai_chunk_chars,
+            "openai_max_output_tokens": self.openai_max_output_tokens,
+            "openai_max_output_tokens_effective": self.openai_max_output_tokens_effective,
+            "openai_model_output_cap": self.openai_model_output_cap,
         }
+        if self.openai_max_output_tokens > self.openai_max_output_tokens_effective:
+            out["openai_max_output_tokens_warning"] = (
+                f"OPENAI_MAX_OUTPUT_TOKENS={self.openai_max_output_tokens} exceeds "
+                f"{self.openai_model} limit; using {self.openai_max_output_tokens_effective}."
+            )
         key = self.openai_api_key.strip()
         if key.startswith("sk-ant"):
             out["openai_api_key_warning"] = (

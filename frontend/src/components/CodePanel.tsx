@@ -88,8 +88,11 @@ export function CodePanel({
 
   useLayoutEffect(() => {
     const ta = textareaRef.current
-    if (ta && lineCount < prevLineCountRef.current) {
-      ta.scrollTop = 0
+    const prev = prevLineCountRef.current
+    if (ta) {
+      if (lineCount < prev || lineCount - prev > 25) {
+        ta.scrollTop = 0
+      }
     }
     prevLineCountRef.current = lineCount
     syncGutterScroll()
@@ -260,9 +263,14 @@ export function CodePanel({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           onScroll={syncGutterScroll}
-          onPaste={(e) => {
+          onPaste={() => {
             if (!editable) return
-            e.stopPropagation()
+            requestAnimationFrame(() => {
+              const ta = textareaRef.current
+              if (!ta) return
+              ta.scrollTop = 0
+              syncGutterScroll()
+            })
           }}
           readOnly={readOnly}
           placeholder={placeholder}
