@@ -10,6 +10,7 @@ import { DirectionGrid } from '@/components/DirectionGrid'
 import { CodePanel } from '@/components/CodePanel'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { StatusPills } from '@/components/StatusPills'
+import { FloatingGuidePanel } from '@/components/FloatingGuidePanel'
 
 export function MigrationStudio() {
   const [health, setHealth] = useState<HealthResponse | null>(null)
@@ -203,6 +204,8 @@ export function MigrationStudio() {
       </main>
 
       <footer className="border-t border-white/5 py-4 text-center text-xs text-slate-500">{ui.footer}</footer>
+
+      <FloatingGuidePanel />
     </div>
   )
 }
