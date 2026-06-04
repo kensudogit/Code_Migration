@@ -8,7 +8,8 @@ import type {
 
 const BASE = '/api/v1'
 
-const CONVERT_TIMEOUT_MS = 300_000
+/** Large multi-chunk conversions (e.g. 2500+ lines) can take 10+ minutes. */
+const CONVERT_TIMEOUT_MS = 900_000
 
 function formatApiError(body: string, status: number): string {
   if (!body.trim()) {
@@ -34,19 +35,37 @@ function formatApiError(body: string, status: number): string {
   return body.length > 500 ? `${body.slice(0, 500)}…` : body
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(formatApiError(body, res.status))
+function wrapFetchError(err: unknown): Error {
+  if (err instanceof Error) {
+    const name = err.name
+    const msg = err.message.toLowerCase()
+    if (name === 'TimeoutError' || name === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
+      return new Error(
+        '変換がタイムアウトしました。大きなファイルはチャンク変換で10〜15分かかることがあります。しばらく待って再試行するか、ソースを分割してください。',
+      )
+    }
+    return err
   }
-  return res.json() as Promise<T>
+  return new Error('リクエストに失敗しました')
+}
+
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(formatApiError(body, res.status))
+    }
+    return res.json() as Promise<T>
+  } catch (err) {
+    throw wrapFetchError(err)
+  }
 }
 
 export function getHealth() {

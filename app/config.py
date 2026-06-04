@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     openai_org_id: str = ""
     openai_project: str = ""
     openai_base_url: str = ""
-    openai_timeout: float = 300.0
+    openai_timeout: float = 900.0
     openai_max_retries: int = 2
     openai_max_output_tokens: int = 16384
     # 0 = no application-level cap on conversion source size

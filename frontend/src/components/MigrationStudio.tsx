@@ -155,7 +155,11 @@ export function MigrationStudio() {
             <div className="flex flex-wrap items-center gap-3 fade-up fade-up-delay-2">
               <button type="button" onClick={onConvert} disabled={loading} className="btn-primary">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                {loading ? ui.converting : ui.convert}
+                {loading
+                  ? source.length > 50_000
+                    ? ui.convertingLarge
+                    : ui.converting
+                  : ui.convert}
               </button>
               <button type="button" onClick={onCopy} disabled={!result} className="btn-secondary">
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}

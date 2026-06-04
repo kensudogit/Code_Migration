@@ -55,7 +55,7 @@ export function CodePanel({
 }: Props) {
   const meta = LANG_META[lang]
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const gutterRef = useRef<HTMLPreElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const prevLineCountRef = useRef(0)
   const [clipboardMsg, setClipboardMsg] = useState<string | null>(null)
   const [scrollLine, setScrollLine] = useState(1)
@@ -69,34 +69,28 @@ export function CodePanel({
 
   const editable = !readOnly && !!onChange
 
-  const syncGutterScroll = useCallback(() => {
+  const resetScrollTop = useCallback(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [])
+
+  const onEditorScroll = useCallback(() => {
+    const sc = scrollRef.current
     const ta = textareaRef.current
-    const gutter = gutterRef.current
-    if (!ta) return
-    const maxScroll = Math.max(0, ta.scrollHeight - ta.clientHeight)
-    if (ta.scrollTop > maxScroll) {
-      ta.scrollTop = maxScroll
-    }
-    if (gutter) {
-      gutter.style.transform = `translate3d(0, -${ta.scrollTop}px, 0)`
-    }
+    if (!sc || !ta) return
     const lh = parseFloat(getComputedStyle(ta).lineHeight)
     const lineHeight = Number.isFinite(lh) && lh > 0 ? lh : 21.3125
-    const firstVisible = Math.min(lineCount, Math.floor(ta.scrollTop / lineHeight) + 1)
+    const firstVisible = Math.min(lineCount, Math.floor(sc.scrollTop / lineHeight) + 1)
     setScrollLine(firstVisible)
   }, [lineCount])
 
   useLayoutEffect(() => {
-    const ta = textareaRef.current
     const prev = prevLineCountRef.current
-    if (ta) {
-      if (lineCount < prev || lineCount - prev > 25) {
-        ta.scrollTop = 0
-      }
+    if (lineCount < prev || Math.abs(lineCount - prev) > 25) {
+      resetScrollTop()
     }
     prevLineCountRef.current = lineCount
-    syncGutterScroll()
-  }, [value, gutterText, lineCount, syncGutterScroll])
+    onEditorScroll()
+  }, [value, lineCount, resetScrollTop, onEditorScroll])
 
   const flash = (msg: string) => {
     setClipboardMsg(msg)
@@ -119,10 +113,9 @@ export function CodePanel({
       requestAnimationFrame(() => {
         el.focus()
         el.setSelectionRange(caret, caret)
-        syncGutterScroll()
       })
     },
-    [onChange, value, syncGutterScroll],
+    [onChange, value],
   )
 
   const handlePaste = async () => {
@@ -160,27 +153,37 @@ export function CodePanel({
   }
 
   const scrollToTop = () => {
-    const ta = textareaRef.current
-    if (!ta) return
-    ta.scrollTop = 0
-    syncGutterScroll()
-    ta.focus()
+    resetScrollTop()
+    textareaRef.current?.focus()
+    onEditorScroll()
   }
 
   const handleClear = () => {
     onChange?.('')
     requestAnimationFrame(() => {
-      const ta = textareaRef.current
-      if (!ta) return
-      ta.scrollTop = 0
-      ta.focus()
-      syncGutterScroll()
+      resetScrollTop()
+      textareaRef.current?.focus()
+      onEditorScroll()
     })
   }
 
   const stopWindowDrag = (e: React.PointerEvent | React.MouseEvent) => {
     e.stopPropagation()
   }
+
+  const lineMeta = lineNumbers ? (
+    <span className="flex items-center gap-2 text-[10px] text-slate-500 tabular-nums">
+      <span>
+        {lineCount.toLocaleString()} {ui.lineCount}
+        {lineCount > 1 ? ` · L${scrollLine}` : ''}
+      </span>
+      {lineCount > 20 && scrollLine > 5 && (
+        <button type="button" onClick={scrollToTop} className="editor-clip-btn py-0.5 px-1.5">
+          {ui.scrollToTop}
+        </button>
+      )}
+    </span>
+  ) : null
 
   const toolbar =
     clipboard && editable ? (
@@ -206,33 +209,12 @@ export function CodePanel({
             <Check className="w-3 h-3" />
             {clipboardMsg}
           </span>
-        ) : null}
-        {lineNumbers && (
-          <span className="ml-auto flex items-center gap-2 text-[10px] text-slate-500 tabular-nums pr-1">
-            <span>
-              {lineCount.toLocaleString()} {ui.lineCount}
-              {lineCount > 1 ? ` · L${scrollLine}` : ''}
-            </span>
-            {lineCount > 30 && scrollLine > 8 && (
-              <button type="button" onClick={scrollToTop} className="editor-clip-btn py-0.5 px-1.5">
-                {ui.scrollToTop}
-              </button>
-            )}
-          </span>
+        ) : (
+          lineMeta && <span className="ml-auto pr-1">{lineMeta}</span>
         )}
       </div>
-    ) : lineNumbers ? (
-      <div className="flex justify-end items-center gap-2 px-2 py-1 border-b border-white/[0.06] bg-black/20 shrink-0">
-        <span className="text-[10px] text-slate-500 tabular-nums">
-          {lineCount.toLocaleString()} {ui.lineCount}
-          {lineCount > 1 ? ` · L${scrollLine}` : ''}
-        </span>
-        {editable && lineCount > 30 && scrollLine > 8 && (
-          <button type="button" onClick={scrollToTop} className="editor-clip-btn py-0.5 px-1.5">
-            {ui.scrollToTop}
-          </button>
-        )}
-      </div>
+    ) : lineMeta ? (
+      <div className="flex justify-end px-2 py-1 border-b border-white/[0.06] bg-black/20 shrink-0">{lineMeta}</div>
     ) : null
 
   const editorBody = (
@@ -242,35 +224,32 @@ export function CodePanel({
       onMouseDown={stopWindowDrag}
     >
       {toolbar}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div
+        ref={scrollRef}
+        className="code-editor-scroll-host flex flex-1 min-h-0 min-w-0 overflow-auto"
+        onScroll={onEditorScroll}
+      >
         {lineNumbers && (
-          <div
-            className="line-gutter-track select-none shrink-0"
+          <pre
+            className="code-editor line-gutter-pre shrink-0 self-start"
             style={{ minWidth: gutterMinWidth }}
             aria-hidden
           >
-            <pre ref={gutterRef} className="code-editor line-gutter-pre">
-              {gutterText}
-            </pre>
-          </div>
+            {gutterText}
+          </pre>
         )}
         <textarea
           ref={textareaRef}
-          className={`code-editor code-editor-scroll flex-1 w-full min-h-0 min-w-0 px-4 py-4 bg-transparent resize-none select-text whitespace-pre overflow-x-auto overflow-y-auto ${
+          rows={lineCount}
+          className={`code-editor code-editor-input flex-1 min-w-0 w-full py-4 px-4 bg-transparent resize-none select-text whitespace-pre self-start ${
             readOnly ? 'text-slate-300 cursor-default' : 'text-slate-200 cursor-text'
           }`}
-          style={{ wordWrap: 'normal', overflowWrap: 'normal' }}
+          style={{ wordWrap: 'normal', overflowWrap: 'normal', overflow: 'hidden' }}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          onScroll={syncGutterScroll}
           onPaste={() => {
             if (!editable) return
-            requestAnimationFrame(() => {
-              const ta = textareaRef.current
-              if (!ta) return
-              ta.scrollTop = 0
-              syncGutterScroll()
-            })
+            requestAnimationFrame(resetScrollTop)
           }}
           readOnly={readOnly}
           placeholder={placeholder}
