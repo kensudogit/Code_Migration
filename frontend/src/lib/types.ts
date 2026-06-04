@@ -34,7 +34,7 @@ export type ConvertResponse = {
   direction: DirectionId
   source_language: Language
   target_language: Language
-  source_code: string
+  source_code?: string
   result_code: string
   model: string
   mock: boolean

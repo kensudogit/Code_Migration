@@ -62,7 +62,7 @@ def complete_job(
                 prompt_tokens,
                 completion_tokens,
                 openai_request_id,
-                json.dumps(warnings) if warnings is not None else None,
+                warnings,
                 job_id,
             ),
         )

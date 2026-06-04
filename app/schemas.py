@@ -49,7 +49,10 @@ class ConvertResponse(BaseModel):
     direction: ConversionDirection
     source_language: Language
     target_language: Language
-    source_code: str
+    source_code: str | None = Field(
+        None,
+        description="Omitted by default to keep responses small; source is already in the client.",
+    )
     result_code: str
     model: str
     mock: bool = False
