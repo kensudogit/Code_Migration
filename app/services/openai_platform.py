@@ -27,6 +27,7 @@ Rules:
 - Use idiomatic constructs in the target language.
 - Preserve meaningful comments; adapt comment style to the target ecosystem.
 - When the input is a fragment of a larger file, convert only that fragment consistently.
+- Set notes to an empty string if you have no extra migration commentary.
 """
 
 DIRECTION_HINTS: dict[ConversionDirection, str] = {
@@ -65,10 +66,10 @@ CONVERSION_JSON_SCHEMA = {
         },
         "notes": {
             "type": "string",
-            "description": "Optional brief migration notes (not part of source code).",
+            "description": "Brief migration notes not part of source code; use empty string if none.",
         },
     },
-    "required": ["converted_code", "warnings"],
+    "required": ["converted_code", "warnings", "notes"],
     "additionalProperties": False,
 }
 
