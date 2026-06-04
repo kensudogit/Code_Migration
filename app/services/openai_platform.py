@@ -17,6 +17,7 @@ from openai import (
 
 from app.config import settings
 from app.services.pairs import ConversionDirection
+from app.services.source_chunking import merge_converted_chunks, split_source_lines
 
 SYSTEM_PROMPT = """You are an expert software migration engineer.
 Convert source code accurately between languages while preserving business logic.
@@ -25,6 +26,7 @@ Rules:
 - List any migration caveats or manual follow-ups in warnings (empty array if none).
 - Use idiomatic constructs in the target language.
 - Preserve meaningful comments; adapt comment style to the target ecosystem.
+- When the input is a fragment of a larger file, convert only that fragment consistently.
 """
 
 DIRECTION_HINTS: dict[ConversionDirection, str] = {
@@ -76,6 +78,21 @@ class TokenUsage:
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     total_tokens: int | None = None
+
+    def add(self, other: "TokenUsage | None") -> "TokenUsage":
+        if other is None:
+            return self
+        return TokenUsage(
+            prompt_tokens=_sum_optional(self.prompt_tokens, other.prompt_tokens),
+            completion_tokens=_sum_optional(self.completion_tokens, other.completion_tokens),
+            total_tokens=_sum_optional(self.total_tokens, other.total_tokens),
+        )
+
+
+def _sum_optional(a: int | None, b: int | None) -> int | None:
+    if a is None and b is None:
+        return None
+    return (a or 0) + (b or 0)
 
 
 @dataclass
@@ -130,11 +147,17 @@ def map_openai_error(exc: Exception) -> OpenAIPlatformError:
     return OpenAIPlatformError(str(exc), 502, request_id=request_id)
 
 
-def _build_user_prompt(direction: ConversionDirection, source_code: str) -> str:
+def _build_user_prompt(
+    direction: ConversionDirection,
+    source_code: str,
+    *,
+    part_label: str | None = None,
+) -> str:
     hint = DIRECTION_HINTS[direction]
+    part_note = f"\nNote: {part_label}\n" if part_label else ""
     return (
         f"Task: {direction.label}\n"
-        f"Instructions: {hint}\n\n"
+        f"Instructions: {hint}{part_note}\n\n"
         f"Source code ({direction.source.value}):\n"
         f"```\n{source_code.strip()}\n```"
     )
@@ -152,8 +175,18 @@ def _parse_structured_content(raw: str) -> tuple[str, list[str], str | None]:
     return converted, warnings, notes_str
 
 
-async def convert_with_openai(direction: ConversionDirection, source_code: str) -> ConversionResult:
-    """Call Chat Completions with Structured Outputs (json_schema)."""
+def _chunk_plan(source_code: str) -> list[str]:
+    if not settings.openai_auto_chunk or settings.openai_chunk_chars <= 0:
+        return [source_code]
+    return split_source_lines(source_code, settings.openai_chunk_chars)
+
+
+async def _convert_single(
+    direction: ConversionDirection,
+    source_code: str,
+    *,
+    part_label: str | None = None,
+) -> ConversionResult:
     client = create_openai_client()
     model = settings.openai_model
 
@@ -162,7 +195,7 @@ async def convert_with_openai(direction: ConversionDirection, source_code: str) 
             model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": _build_user_prompt(direction, source_code)},
+                {"role": "user", "content": _build_user_prompt(direction, source_code, part_label=part_label)},
             ],
             temperature=0.2,
             max_tokens=settings.openai_max_output_tokens,
@@ -207,4 +240,43 @@ async def convert_with_openai(direction: ConversionDirection, source_code: str) 
         notes=notes,
         usage=usage,
         request_id=request_id,
+    )
+
+
+async def convert_with_openai(direction: ConversionDirection, source_code: str) -> ConversionResult:
+    """Call OpenAI; auto-chunk very large sources (no application input cap)."""
+    chunks = _chunk_plan(source_code)
+
+    if len(chunks) == 1:
+        return await _convert_single(direction, chunks[0])
+
+    parts: list[str] = []
+    all_warnings: list[str] = [
+        f"Source was converted in {len(chunks)} parts ({len(source_code):,} characters total). "
+        "Review merged output for continuity."
+    ]
+    notes_parts: list[str] = []
+    usage: TokenUsage | None = None
+    last_request_id: str | None = None
+
+    for index, chunk in enumerate(chunks, start=1):
+        label = f"This is part {index} of {len(chunks)} of the full source file."
+        part_result = await _convert_single(direction, chunk, part_label=label)
+        parts.append(part_result.result_code)
+        all_warnings.extend(part_result.warnings)
+        if part_result.notes:
+            notes_parts.append(f"[Part {index}] {part_result.notes}")
+        usage = (usage or TokenUsage()).add(part_result.usage)
+        if part_result.request_id:
+            last_request_id = part_result.request_id
+
+    merged = merge_converted_chunks(parts, direction.target.value)
+    return ConversionResult(
+        result_code=merged,
+        model=settings.openai_model,
+        is_mock=False,
+        warnings=all_warnings,
+        notes="\n".join(notes_parts) if notes_parts else None,
+        usage=usage,
+        request_id=last_request_id,
     )

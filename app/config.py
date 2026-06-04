@@ -34,9 +34,15 @@ class Settings(BaseSettings):
     openai_org_id: str = ""
     openai_project: str = ""
     openai_base_url: str = ""
-    openai_timeout: float = 120.0
+    openai_timeout: float = 300.0
     openai_max_retries: int = 2
     openai_max_output_tokens: int = 16384
+    # 0 = no application-level cap on conversion source size
+    source_code_max_bytes: int = 0
+    # Split large sources across multiple OpenAI calls (line-safe chunks)
+    openai_auto_chunk: bool = True
+    # Characters per chunk when auto-chunking; 0 disables splitting even if auto_chunk is true
+    openai_chunk_chars: int = 80_000
     api_host: str = "0.0.0.0"
     api_port: int = 8090
 
@@ -90,6 +96,10 @@ class Settings(BaseSettings):
             "ai_enabled": self.ai_enabled,
             "railway": is_railway(),
             "managed_deploy": is_managed_deploy(),
+            "source_code_max_bytes": self.source_code_max_bytes,
+            "source_unlimited": self.source_code_max_bytes <= 0,
+            "openai_auto_chunk": self.openai_auto_chunk,
+            "openai_chunk_chars": self.openai_chunk_chars,
         }
         key = self.openai_api_key.strip()
         if key.startswith("sk-ant"):

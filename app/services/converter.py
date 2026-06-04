@@ -33,7 +33,7 @@ def _mock_convert(direction: ConversionDirection, source_code: str) -> Conversio
     elif direction.target == Language.TYPESCRIPT:
         code = note + f"// Original:\n/*\n{source_code.strip()}\n*/\nexport {{}};\n"
     else:
-        code = note + f"      * Original:\n      * {source_code.strip()[:200].replace(chr(10), ' ')}\n"
+        code = note + f"      * Original preserved below\n      * (see full source in comment block)\n/*\n{source_code.strip()}\n*/\n"
 
     return ConversionResult(
         result_code=code,

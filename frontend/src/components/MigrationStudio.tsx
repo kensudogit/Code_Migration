@@ -17,7 +17,7 @@ import type { ConvertResponse, DirectionId, DirectionInfo, HealthResponse, JobSu
 import { SAMPLE_CODE } from '@/lib/types'
 import { ui } from '@/lib/ui'
 import { DirectionRemoteModal } from '@/components/DirectionRemoteModal'
-import { CodePanel } from '@/components/CodePanel'
+import { EditorWorkspace } from '@/components/EditorWorkspace'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { StatusPills } from '@/components/StatusPills'
 import { FloatingGuidePanel } from '@/components/FloatingGuidePanel'
@@ -142,18 +142,14 @@ export function MigrationStudio() {
                 <span className="text-slate-600">·</span>
                 <span className="text-sm text-slate-500">Edit & convert</span>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 min-h-[440px]">
-                <CodePanel title={ui.source} lang={srcLang} value={source} onChange={setSource} lineNumbers />
-                <CodePanel
-                  title={ui.result}
-                  lang={tgtLang}
-                  value={result}
-                  readOnly
-                  placeholder={ui.resultPlaceholder}
-                  lineNumbers
-                  accent
-                />
-              </div>
+              <EditorWorkspace
+                sourceLang={srcLang}
+                targetLang={tgtLang}
+                source={source}
+                result={result}
+                onSourceChange={setSource}
+                resultPlaceholder={ui.resultPlaceholder}
+              />
             </section>
 
             <div className="flex flex-wrap items-center gap-3 fade-up fade-up-delay-2">

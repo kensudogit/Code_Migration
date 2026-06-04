@@ -58,6 +58,16 @@ def list_directions() -> DirectionsResponse:
 
 @router.post("/convert", response_model=ConvertResponse)
 async def convert(body: ConvertRequest) -> ConvertResponse:
+    max_bytes = settings.source_code_max_bytes
+    if max_bytes > 0:
+        size = len(body.source_code.encode("utf-8"))
+        if size > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Source code exceeds limit ({size} > {max_bytes} bytes). "
+                "Set SOURCE_CODE_MAX_BYTES=0 for unlimited.",
+            )
+
     direction: ConversionDirection | None = body.direction
     if direction is None:
         if body.source_language is None or body.target_language is None:

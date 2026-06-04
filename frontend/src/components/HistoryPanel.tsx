@@ -90,9 +90,8 @@ export function HistoryPanel({ jobs, onRefresh }: Props) {
                   </div>
                 </button>
                 {open && detail && (
-                  <pre className="mt-2 mx-1 mb-1 p-3 rounded-xl bg-black/40 border border-white/[0.04] text-[11px] text-slate-400 overflow-x-auto max-h-44 code-editor whitespace-pre-wrap leading-relaxed">
-                    {detail.slice(0, 800)}
-                    {detail.length > 800 ? '...' : ''}
+                  <pre className="mt-2 mx-1 mb-1 p-3 rounded-xl bg-black/40 border border-white/[0.04] text-[11px] text-slate-400 overflow-auto max-h-64 code-editor whitespace-pre-wrap leading-relaxed">
+                    {detail}
                   </pre>
                 )}
               </li>
