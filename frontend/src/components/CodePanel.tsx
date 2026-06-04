@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ClipboardPaste, Copy, Eraser, GripVertical, TextSelect } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Language } from '@/lib/types'
 import { LANG_META } from '@/lib/types'
 import { ui } from '@/lib/ui'
@@ -22,6 +22,23 @@ type Props = {
   onDragHandlePointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void
 }
 
+/** Logical line count (matches textarea newlines, including trailing newline). */
+function countLines(text: string): number {
+  if (!text) return 1
+  let n = 1
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\n') n++
+  }
+  return n
+}
+
+function buildLineNumberText(lineCount: number): string {
+  if (lineCount <= 1) return '1'
+  const parts: string[] = new Array(lineCount)
+  for (let i = 0; i < lineCount; i++) parts[i] = String(i + 1)
+  return parts.join('\n')
+}
+
 export function CodePanel({
   title,
   lang,
@@ -38,10 +55,29 @@ export function CodePanel({
 }: Props) {
   const meta = LANG_META[lang]
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const gutterRef = useRef<HTMLPreElement>(null)
   const [clipboardMsg, setClipboardMsg] = useState<string | null>(null)
 
-  const lines = value ? value.split('\n').length : 1
+  const lineCount = useMemo(() => countLines(value), [value])
+  const gutterText = useMemo(() => buildLineNumberText(lineCount), [lineCount])
+  const gutterMinWidth = useMemo(() => {
+    const digits = String(lineCount).length
+    return `calc(${Math.max(2.75, 0.5 + digits * 0.55)}rem + 1.5rem)`
+  }, [lineCount])
+
   const editable = !readOnly && !!onChange
+
+  const syncGutterScroll = useCallback(() => {
+    const ta = textareaRef.current
+    const gutter = gutterRef.current
+    if (ta && gutter) {
+      gutter.style.transform = `translate3d(0, -${ta.scrollTop}px, 0)`
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    syncGutterScroll()
+  }, [value, gutterText, syncGutterScroll])
 
   const flash = (msg: string) => {
     setClipboardMsg(msg)
@@ -64,9 +100,10 @@ export function CodePanel({
       requestAnimationFrame(() => {
         el.focus()
         el.setSelectionRange(caret, caret)
+        syncGutterScroll()
       })
     },
-    [onChange, value],
+    [onChange, value, syncGutterScroll],
   )
 
   const handlePaste = async () => {
@@ -147,24 +184,27 @@ export function CodePanel({
       onMouseDown={stopWindowDrag}
     >
       {toolbar}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {lineNumbers && (
           <div
-            className="select-none py-4 px-3 text-right text-slate-600 code-editor text-[11px] border-r border-white/[0.04] min-w-[2.75rem] leading-[1.65] shrink-0 overflow-hidden"
+            className="line-gutter-track select-none shrink-0"
+            style={{ minWidth: gutterMinWidth }}
             aria-hidden
           >
-            {Array.from({ length: Math.max(lines, 8) }, (_, i) => (
-              <div key={i}>{i + 1}</div>
-            ))}
+            <pre ref={gutterRef} className="code-editor line-gutter-pre">
+              {gutterText}
+            </pre>
           </div>
         )}
         <textarea
           ref={textareaRef}
-          className={`code-editor flex-1 w-full min-h-0 px-4 py-4 bg-transparent resize-none select-text ${
+          className={`code-editor code-editor-scroll flex-1 w-full min-h-0 min-w-0 px-4 py-4 bg-transparent resize-none select-text whitespace-pre overflow-x-auto overflow-y-auto ${
             readOnly ? 'text-slate-300 cursor-default' : 'text-slate-200 cursor-text'
           }`}
+          style={{ wordWrap: 'normal', overflowWrap: 'normal' }}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
+          onScroll={syncGutterScroll}
           onPaste={(e) => {
             if (!editable) return
             e.stopPropagation()
@@ -175,6 +215,7 @@ export function CodePanel({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          wrap="off"
         />
       </div>
     </div>

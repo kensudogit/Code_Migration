@@ -162,6 +162,33 @@ body::before {
   font-size: 0.8125rem;
   line-height: 1.65;
   tab-size: 2;
+  white-space: pre;
+}
+
+.code-editor-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+}
+
+.line-gutter-track {
+  min-width: 2.75rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.line-gutter-pre {
+  margin: 0;
+  padding: 1rem 0.75rem;
+  text-align: right;
+  color: rgb(71 85 105);
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
 }
 
 .code-editor:focus {
