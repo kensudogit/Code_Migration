@@ -18,7 +18,7 @@ def _mock_convert(direction: ConversionDirection, source_code: str) -> Conversio
     note = (
         f"{header}\n"
         f"# Direction: {direction.label}\n"
-        f"# Set OPENAI_API_KEY in .env for real AI conversion.\n\n"
+        f"# Set OPENAI_API_KEY in .env or Railway Variables for real AI conversion.\n\n"
     )
     if direction.target == Language.PYTHON:
         code = note + f'"""Stub from {direction.source.value}."""\n\n# Original:\n"""\n{source_code.strip()}\n"""\n'
@@ -39,7 +39,7 @@ def _mock_convert(direction: ConversionDirection, source_code: str) -> Conversio
         result_code=code,
         model="mock",
         is_mock=True,
-        warnings=["Mock mode: set OPENAI_API_KEY for real AI conversion."],
+        warnings=["Mock mode: set OPENAI_API_KEY in .env or Railway Variables."],
     )
 
 

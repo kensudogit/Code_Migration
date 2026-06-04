@@ -13,4 +13,4 @@ COPY scripts ./scripts
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8090
 
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8090"]
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8090}"]

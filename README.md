@@ -13,7 +13,7 @@ Python + PostgreSQL + **Next.js** AI code conversion studio.
 | COBOL ? Java | `cobol_to_java` |
 | Java ? COBOL | `java_to_cobol` |
 
-## Quick start (Docker ù recommended)
+## Quick start (Docker ? recommended)
 
 ```powershell
 cd C:\devlop\Code_Migration
@@ -53,7 +53,7 @@ copy ..\.env.example ..\.env
 npm run dev
 ```
 
-Open http://localhost:3000 ù API requests proxy to `http://localhost:8090` via `next.config.ts`.
+Open http://localhost:3000 ? API requests proxy to `http://localhost:8090` via `next.config.ts`.
 
 ## Project layout
 
@@ -85,4 +85,22 @@ Conversion uses the [OpenAI Chat Completions API](https://platform.openai.com/do
 | `OPENAI_MAX_OUTPUT_TOKENS` | Max completion tokens (default 16384) |
 
 API responses include `warnings`, `usage` (token counts), and `request_id`. Job history stores token usage and warnings after migration `002_openai_platform.sql`.
-# Code_Migration
+
+## Railway deploy
+
+The app reads `OPENAI_API_KEY` from **Railway Variables** (environment variables take precedence over local `.env`).
+
+```powershell
+railway login
+railway link -p <Project-ID>
+railway variables set OPENAI_API_KEY=sk-...
+railway up
+```
+
+| Setting | Value |
+|---------|-------|
+| Config file | `/railway.toml` |
+| Dockerfile | `Dockerfile.unified` (Web + API) |
+| Health | `/health` |
+
+See [docs/RAILWAY.md](docs/RAILWAY.md) and `.env.railway.example`.

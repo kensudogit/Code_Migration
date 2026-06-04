@@ -13,11 +13,12 @@ export const ui = {
   copied: '\u30b3\u30d4\u30fc\u6e08\u307f',
   emptySource: '\u30bd\u30fc\u30b9\u30b3\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044',
   convertFailed: '\u5909\u63db\u306b\u5931\u6557\u3057\u307e\u3057\u305f',
-  mockHint: '\u30e2\u30c3\u30af\u30e2\u30fc\u30c9\uff08OPENAI_API_KEY \u672a\u8a2d\u5b9a\uff09',
+  mockHint:
+    '\u30e2\u30c3\u30af\u30e2\u30fc\u30c9\uff08OPENAI_API_KEY \u672a\u8a2d\u5b9a\u3001Railway Variables \u3092\u78ba\u8a8d\uff09',
   demoOutput: '\u30c7\u30e2\u51fa\u529b',
   featureAi: 'AI \u5909\u63db',
   featureAiDesc:
-    'OpenAI \u306b\u3088\u308b idiomatic \u306a\u30b3\u30fc\u30c9\u751f\u6210',
+    'OpenAI Platform \u3068 Railway \u306e OPENAI_API_KEY \u3067 idiomatic \u306a\u30b3\u30fc\u30c9\u751f\u6210',
   featureDb: 'PostgreSQL',
   featureDbDesc:
     '\u5909\u63db\u5c65\u6b74\u3092\u30b8\u30e7\u30d6\u3068\u3057\u3066\u6c38\u7d9a\u5316',

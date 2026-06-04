@@ -46,7 +46,20 @@ def root():
         "service": "code-migration",
         "docs": "/docs",
         "health": "/api/v1/health",
+        "setup": "/api/v1/setup",
         "directions": "/api/v1/directions",
+        "postgres": ping(),
+        "ai_enabled": settings.ai_enabled,
+        "railway": settings.on_railway,
+    }
+
+
+@app.get("/health")
+def railway_health():
+    """Railway healthcheck for API-only deploy."""
+    return {
+        "ok": True,
+        "service": "code-migration-api",
         "postgres": ping(),
         "ai_enabled": settings.ai_enabled,
     }

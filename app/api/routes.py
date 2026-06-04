@@ -26,7 +26,19 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(ok=True, postgres=ping(), ai_enabled=settings.ai_enabled)
+    return HealthResponse(
+        ok=True,
+        postgres=ping(),
+        ai_enabled=settings.ai_enabled,
+        railway=settings.on_railway,
+        openai_configured=settings.ai_enabled,
+    )
+
+
+@router.get("/setup")
+def setup_status() -> dict:
+    """Non-secret SaaS / Railway diagnostics."""
+    return settings.setup_status(postgres_connected=ping())
 
 
 @router.get("/directions", response_model=DirectionsResponse)

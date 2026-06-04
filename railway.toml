@@ -1,0 +1,20 @@
+# Railway: Web UI + FastAPI in ONE service (recommended)
+#
+# Service Settings:
+#   Root Directory     ->  leave EMPTY (repo root)
+#   Config file path   ->  /railway.toml
+#
+# Variables (service ? Variables):
+#   OPENAI_API_KEY     ->  your OpenAI Platform key (required for real AI)
+#   DATABASE_URL       ->  Reference from PostgreSQL plugin
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.unified"
+watchPatterns = ["app/**", "frontend/**", "migrations/**", "scripts/**", "Dockerfile.unified"]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+numReplicas = 1

@@ -19,6 +19,8 @@ export type HealthResponse = {
   ok: boolean
   postgres: boolean
   ai_enabled: boolean
+  railway?: boolean
+  openai_configured?: boolean
 }
 
 export type TokenUsage = {
