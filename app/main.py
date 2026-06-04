@@ -1,6 +1,6 @@
 """Code Migration API - AI code conversion (Java / Python / TypeScript / COBOL)."""
 
-
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,11 +11,21 @@ from app.config import settings
 from app.db import close_pool, init_pool, ping
 from app.migrate import apply_migrations
 
+logger = logging.getLogger("code-migration")
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    init_pool()
-    apply_migrations()
+    if settings.postgres_enabled:
+        try:
+            init_pool()
+            apply_migrations()
+            logger.info("PostgreSQL ready")
+        except Exception as exc:
+            logger.warning("PostgreSQL unavailable at startup (continuing without history): %s", exc)
+            close_pool()
+    else:
+        logger.info("PostgreSQL disabled (DATABASE_URL not configured)")
     yield
     close_pool()
 
@@ -23,8 +33,8 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Code Migration API",
     description=(
-        "AI-powered code conversion: Java -> Python, Java -> TypeScript, COBOL -> Java. "
-        "History stored in PostgreSQL."
+        "AI-powered code conversion: Java <-> Python, Java <-> TypeScript, COBOL <-> Java. "
+        "History stored in PostgreSQL when configured."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -50,6 +60,7 @@ def root():
         "setup": "/api/v1/setup",
         "directions": "/api/v1/directions",
         "postgres": ping(),
+        "postgres_enabled": settings.postgres_enabled,
         "ai_enabled": settings.ai_enabled,
         "railway": settings.on_railway,
     }
@@ -62,6 +73,7 @@ def railway_health():
         "ok": True,
         "service": "code-migration-api",
         "postgres": ping(),
+        "postgres_enabled": settings.postgres_enabled,
         "ai_enabled": settings.ai_enabled,
     }
 

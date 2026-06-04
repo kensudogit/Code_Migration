@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: codemig
       POSTGRES_DB: code_migration
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PUBLISH_PORT:-5434}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d:ro
@@ -43,7 +43,7 @@ services:
       args:
         API_URL: http://api:8090
     ports:
-      - "3000:3000"
+      - "${WEB_PUBLISH_PORT:-3001}:3000"
     environment:
       API_URL: http://api:8090
     depends_on:

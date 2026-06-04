@@ -14,6 +14,7 @@ class HealthResponse(BaseModel):
     ai_enabled: bool
     railway: bool = False
     openai_configured: bool = False
+    postgres_enabled: bool = False
 
 
 class DirectionInfo(BaseModel):

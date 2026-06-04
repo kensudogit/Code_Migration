@@ -2,12 +2,15 @@
 
 from pathlib import Path
 
+from app.config import settings
 from app.db import get_conn
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
 
 
 def apply_migrations() -> None:
+    if not settings.postgres_enabled:
+        return
     sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
     if not sql_files:
         return

@@ -15,13 +15,27 @@ if [ -z "${DATABASE_URL:-}" ] && [ -n "${DATABASE_PRIVATE_URL:-}" ]; then
 fi
 
 echo "[unified] web=${WEB_PORT} api=${API_PORT}"
-echo "[unified] DATABASE_URL=${DATABASE_URL:+set}${DATABASE_URL:-empty}"
-echo "[unified] OPENAI_API_KEY=${OPENAI_API_KEY:+set}${OPENAI_API_KEY:-empty}"
+if [ -n "${DATABASE_URL:-}" ]; then
+  echo "[unified] DATABASE_URL=set"
+else
+  echo "[unified] DATABASE_URL=empty (history disabled until Postgres is linked)"
+fi
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+  echo "[unified] OPENAI_API_KEY=set"
+else
+  echo "[unified] OPENAI_API_KEY=empty"
+fi
 echo "[unified] OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}"
 
+case "${OPENAI_API_KEY:-}" in
+  sk-ant*)
+    echo "[unified] WARNING: OPENAI_API_KEY looks like Anthropic (sk-ant-). Use an OpenAI key (sk-...)."
+    ;;
+esac
+
 if [ -z "${OPENAI_API_KEY:-}" ]; then
-  echo "[unified] WARNING: OPENAI_API_KEY is empty — conversions run in mock mode"
-  echo "[unified]   Railway ? this service ? Variables ? OPENAI_API_KEY ? Redeploy"
+  echo "[unified] WARNING: OPENAI_API_KEY is empty - conversions run in mock mode"
+  echo "[unified]   Railway -> this service -> Variables -> OPENAI_API_KEY -> Redeploy"
 fi
 
 echo "[unified] starting FastAPI..."

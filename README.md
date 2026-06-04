@@ -25,9 +25,9 @@ docker compose up -d --build
 
 | Service | URL |
 |---------|-----|
-| **Web UI (Next.js)** | http://localhost:3000 |
+| **Web UI (Next.js)** | http://localhost:3001 (`WEB_PUBLISH_PORT` ????) |
 | API / Swagger | http://localhost:8090/docs |
-| PostgreSQL | localhost:5433 (`codemig` / `codemig`) |
+| PostgreSQL | localhost:5434 (`codemig` / `codemig`) ? `POSTGRES_PUBLISH_PORT` ???? |
 
 ## Local dev (split)
 
@@ -53,7 +53,7 @@ copy ..\.env.example ..\.env
 npm run dev
 ```
 
-Open http://localhost:3000 ? API requests proxy to `http://localhost:8090` via `next.config.ts`.
+Open http://localhost:3001 (Docker) ? API requests proxy to `http://localhost:8090` via `next.config.ts`.
 
 ## Project layout
 

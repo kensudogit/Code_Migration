@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.py text eol=lf encoding=utf-8
+*.sh text eol=lf
+*.sql text eol=lf

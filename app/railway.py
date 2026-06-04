@@ -5,13 +5,27 @@ from __future__ import annotations
 import os
 from urllib.parse import quote, urlunparse
 
+LOCAL_DATABASE_URL = "postgresql://codemig:codemig@localhost:5434/code_migration"
+
 
 def is_railway() -> bool:
     return bool(
         os.getenv("RAILWAY_ENVIRONMENT")
         or os.getenv("RAILWAY_PROJECT_ID")
         or os.getenv("RAILWAY_SERVICE_ID")
+        or os.getenv("RAILWAY_PUBLIC_DOMAIN")
+        or os.getenv("RAILWAY_STATIC_URL")
     )
+
+
+def is_managed_deploy() -> bool:
+    """Railway or unified Docker image (production-like runtime)."""
+    return is_railway() or os.getenv("UNIFIED_DEPLOY") == "1"
+
+
+def is_local_database_url(url: str) -> bool:
+    lower = url.lower()
+    return "localhost" in lower or "127.0.0.1" in lower or "host.docker.internal" in lower
 
 
 def first_env(*keys: str) -> str:

@@ -32,6 +32,7 @@ def health() -> HealthResponse:
         ai_enabled=settings.ai_enabled,
         railway=settings.on_railway,
         openai_configured=settings.ai_enabled,
+        postgres_enabled=settings.postgres_enabled,
     )
 
 
@@ -74,7 +75,7 @@ async def convert(body: ConvertRequest) -> ConvertResponse:
     job_id = None
     model_name = settings.openai_model if settings.ai_enabled else "mock"
 
-    if body.save_history:
+    if body.save_history and settings.postgres_enabled:
         job_id = repository.create_job(direction, body.source_code, model=model_name)
 
     try:
@@ -123,6 +124,8 @@ async def convert(body: ConvertRequest) -> ConvertResponse:
 
 @router.get("/jobs", response_model=list[JobSummary])
 def jobs(limit: int = 50) -> list[JobSummary]:
+    if not settings.postgres_enabled:
+        return []
     rows = repository.list_jobs(limit=min(limit, 200))
     return [JobSummary(**row) for row in rows]
 
