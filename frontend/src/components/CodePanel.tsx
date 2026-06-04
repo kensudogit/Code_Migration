@@ -29,36 +29,45 @@ export function CodePanel({
 
   return (
     <div
-      className={`flex flex-col rounded-2xl overflow-hidden border min-h-[360px] ${
-        accent ? 'border-indigo-500/30 shadow-lg shadow-indigo-500/5' : 'border-white/8'
-      } glass`}
+      className={`flex flex-col rounded-2xl overflow-hidden min-h-[380px] surface ${
+        accent ? 'ring-1 ring-violet-500/25 shadow-[0_0_40px_rgba(139,92,246,0.08)]' : ''
+      }`}
     >
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/20">
-        <div className="flex items-center gap-2">
-          <span className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-black/25">
+        <div className="flex items-center gap-3">
+          <span className="flex gap-1.5" aria-hidden>
+            <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+            <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+            <span className="w-3 h-3 rounded-full bg-[#28c840]" />
           </span>
-          <span className="text-xs font-medium text-slate-400 ml-2">{title}</span>
+          <span className="text-xs font-medium text-slate-400">{title}</span>
         </div>
         <span
-          className="text-[10px] font-bold uppercase px-2 py-0.5 rounded"
-          style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
+          className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md"
+          style={{
+            backgroundColor: `${meta.color}18`,
+            color: meta.color,
+            border: `1px solid ${meta.color}33`,
+          }}
         >
           {meta.label}
         </span>
       </div>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 bg-[#0a0f1a]/80">
         {lineNumbers && (
-          <div className="select-none py-3 px-2 text-right text-slate-600 code-editor text-xs border-r border-white/5 bg-black/10 min-w-[2.5rem]">
-            {Array.from({ length: Math.max(lines, 12) }, (_, i) => (
+          <div
+            className="select-none py-4 px-3 text-right text-slate-600 code-editor text-[11px] border-r border-white/[0.04] min-w-[2.75rem] leading-[1.65]"
+            aria-hidden
+          >
+            {Array.from({ length: Math.max(lines, 14) }, (_, i) => (
               <div key={i}>{i + 1}</div>
             ))}
           </div>
         )}
         <textarea
-          className="code-editor flex-1 w-full min-h-[300px] p-3 bg-transparent text-slate-200 resize-none"
+          className={`code-editor flex-1 w-full min-h-[320px] px-4 py-4 bg-transparent resize-none ${
+            readOnly ? 'text-slate-300' : 'text-slate-200'
+          }`}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           readOnly={readOnly}

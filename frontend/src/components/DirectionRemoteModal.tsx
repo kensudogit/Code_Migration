@@ -61,32 +61,30 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full text-left rounded-2xl p-5 border-2 border-indigo-500/40 bg-slate-900 hover:bg-slate-800/95 hover:border-indigo-400/60 transition-all group shadow-inner shadow-black/20"
+        className="remote-trigger w-full text-left rounded-2xl p-5 sm:p-6 group"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/50">
-              <Radio className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-violet-900/40 group-hover:shadow-violet-800/50 transition-shadow">
+              <Radio className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-slate-400 mb-1.5">{ui.remoteTapToOpen}</div>
-              {current && (
-                <DirectionLabel source={current.source} target={current.target} size="lg" />
-              )}
+              <p className="section-label m-0 mb-2">{ui.remoteTapToOpen}</p>
+              {current && <DirectionLabel source={current.source} target={current.target} size="lg" />}
             </div>
           </div>
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-white shrink-0 px-3 py-2 rounded-xl bg-indigo-600 group-hover:bg-indigo-500">
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-white shrink-0 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 group-hover:bg-white/15 group-hover:border-white/15 transition-colors">
             {ui.remoteOpen}
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 opacity-80" />
           </span>
         </div>
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-[180] flex items-center justify-center p-4 sm:p-6 bg-slate-950/85"
+          className="fixed inset-0 z-[180] flex items-center justify-center p-4 sm:p-8 bg-black/70 backdrop-blur-md"
           role="presentation"
           onClick={() => setOpen(false)}
         >
@@ -94,29 +92,28 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
             role="dialog"
             aria-modal="true"
             aria-label={ui.remoteTitle}
-            className="remote-shell remote-panel w-full max-w-xl rounded-3xl border-2 border-slate-600 p-6 sm:p-8"
+            className="remote-shell remote-panel w-full max-w-2xl rounded-3xl border p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <div className="flex items-center gap-2 mb-3" aria-hidden>
+                  <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+                  <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                  <span className="w-3 h-3 rounded-full bg-[#28c840]" />
                 </div>
-                <h2 className="text-lg font-bold text-white m-0 tracking-tight">{ui.remoteTitle}</h2>
+                <h2 className="text-xl font-bold text-white m-0 tracking-tight">{ui.remoteTitle}</h2>
+                <p className="text-sm text-slate-400 m-0 mt-2 leading-relaxed max-w-md">{ui.remoteHint}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-2.5 rounded-xl text-slate-300 bg-slate-800 border border-slate-600 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-2.5 rounded-xl text-slate-400 border border-white/[0.08] bg-white/[0.03] hover:text-white hover:bg-white/[0.06] transition-colors shrink-0"
                 aria-label={ui.remoteClose}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            <p className="text-sm text-slate-300 text-center mb-6 m-0 leading-relaxed px-2">{ui.remoteHint}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map((d) => {
@@ -126,21 +123,16 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
                     key={d.id}
                     type="button"
                     onClick={() => pick(d.id)}
-                    className={`remote-key relative text-left rounded-2xl px-4 py-4 min-h-[4.5rem] border-2 transition-all duration-200 ${
+                    className={`remote-key relative text-left rounded-2xl px-5 py-4 min-h-[5rem] border transition-all duration-200 ${
                       active
-                        ? 'border-indigo-400 bg-indigo-600/30 shadow-lg shadow-indigo-900/40'
-                        : 'border-slate-600 bg-slate-800 hover:bg-slate-700 hover:border-slate-500'
+                        ? 'border-violet-400/50 bg-violet-500/15 shadow-[0_0_24px_rgba(139,92,246,0.15)]'
+                        : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12]'
                     }`}
                   >
                     {active && (
-                      <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-indigo-400" />
+                      <span className="absolute left-0 top-4 bottom-4 w-0.5 rounded-r-full bg-gradient-to-b from-violet-400 to-cyan-400" />
                     )}
-                    <DirectionLabel
-                      source={d.source}
-                      target={d.target}
-                      size="md"
-                      bright={active}
-                    />
+                    <DirectionLabel source={d.source} target={d.target} size="md" bright={active} />
                   </button>
                 )
               })}
@@ -165,15 +157,18 @@ function DirectionLabel({
 }) {
   const src = LANG_META[source]
   const tgt = LANG_META[target]
-  const text = size === 'lg' ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'
+  const text = size === 'lg' ? 'text-xl sm:text-2xl' : 'text-lg'
   const arrow = size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
-  const muted = bright ? 'text-white' : 'text-slate-100'
 
   return (
-    <div className={`flex items-center gap-2 flex-wrap font-bold ${text} ${muted}`}>
-      <span style={{ color: src.color }}>{src.label}</span>
-      <ArrowRight className={`${arrow} text-indigo-300 shrink-0`} aria-hidden />
-      <span style={{ color: tgt.color }}>{tgt.label}</span>
+    <div className={`flex items-center gap-2.5 flex-wrap font-bold ${text}`}>
+      <span style={{ color: src.color }} className={bright ? '' : 'opacity-95'}>
+        {src.label}
+      </span>
+      <ArrowRight className={`${arrow} text-slate-500 shrink-0`} aria-hidden />
+      <span style={{ color: tgt.color }} className={bright ? '' : 'opacity-95'}>
+        {tgt.label}
+      </span>
     </div>
   )
 }

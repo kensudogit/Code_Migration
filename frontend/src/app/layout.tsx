@@ -6,11 +6,13 @@ import './globals.css'
 const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
 })
 
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -20,8 +22,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={`${sans.variable} ${mono.variable}`}>
-      <body className="font-[family-name:var(--font-sans)] antialiased">{children}</body>
+    <html lang="ja" className={`${sans.variable} ${mono.variable} scroll-smooth`}>
+      <body className="font-[family-name:var(--font-sans)] antialiased text-slate-100">
+        {children}
+      </body>
     </html>
   )
 }
