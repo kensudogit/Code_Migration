@@ -2,6 +2,7 @@
 
 import { BookOpen, ChevronDown, ChevronUp, GripVertical, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { clampFloatingPosition } from '@/lib/floatingPosition'
 import {
   defaultGuidePanelState,
   guideSections,
@@ -24,16 +25,6 @@ function loadState(): GuidePanelState {
     }
   } catch {
     return defaultGuidePanelState
-  }
-}
-
-function clampPosition(x: number, y: number, width: number, height: number) {
-  const margin = 8
-  const maxX = Math.max(margin, window.innerWidth - width - margin)
-  const maxY = Math.max(margin, window.innerHeight - height - margin)
-  return {
-    x: Math.min(Math.max(margin, x), maxX),
-    y: Math.min(Math.max(margin, y), maxY),
   }
 }
 
@@ -61,7 +52,7 @@ export function FloatingGuidePanel() {
   const persistPosition = useCallback(() => {
     const el = panelRef.current
     if (!el) return
-    const { x, y } = clampPosition(state.x, state.y, el.offsetWidth, el.offsetHeight)
+    const { x, y } = clampFloatingPosition(state.x, state.y, el.offsetWidth, el.offsetHeight)
     if (x !== state.x || y !== state.y) {
       setState((s) => ({ ...s, x, y }))
     }
@@ -92,7 +83,7 @@ export function FloatingGuidePanel() {
     const el = panelRef.current
     const w = el?.offsetWidth ?? 360
     const h = el?.offsetHeight ?? 200
-    const next = clampPosition(dragRef.current.originX + dx, dragRef.current.originY + dy, w, h)
+    const next = clampFloatingPosition(dragRef.current.originX + dx, dragRef.current.originY + dy, w, h)
     setState((s) => ({ ...s, ...next }))
   }
 

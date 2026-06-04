@@ -231,33 +231,14 @@ body::before {
   animation-delay: 0.12s;
 }
 
-/* Direction remote (scenario-style panel) */
-.direction-remote-panel {
-  max-width: 28rem;
-}
-
-.direction-remote-grid {
-  max-height: 15rem;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.direction-remote-card {
-  min-height: 4.25rem;
-}
-
-.direction-remote-card:active {
-  transform: scale(0.98);
-}
-
-.direction-remote-card:focus-visible {
+/* Direction remote (floating draggable) */
+.direction-remote-floating button:focus-visible {
   outline: 2px solid rgba(139, 92, 246, 0.55);
   outline-offset: 2px;
 }
 
-.direction-remote-collapsed:focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.55);
-  outline-offset: 2px;
+.direction-remote-picker button:active {
+  transform: scale(0.99);
 }
 
 /* Scrollbar */
