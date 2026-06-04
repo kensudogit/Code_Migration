@@ -1,0 +1,63 @@
+"""Code Migration API ù AI code conversion (Java / Python / TypeScript / COBOL)."""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import router
+from app.config import settings
+from app.db import close_pool, init_pool, ping
+from app.migrate import apply_migrations
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    init_pool()
+    apply_migrations()
+    yield
+    close_pool()
+
+
+app = FastAPI(
+    title="Code Migration API",
+    description=(
+        "AI-powered code conversion: Java ? Python, Java ? TypeScript, COBOL ? Java. "
+        "History stored in PostgreSQL."
+    ),
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(router, prefix="/api/v1")
+
+
+@app.get("/")
+def root():
+    return {
+        "service": "code-migration",
+        "docs": "/docs",
+        "health": "/api/v1/health",
+        "directions": "/api/v1/directions",
+        "postgres": ping(),
+        "ai_enabled": settings.ai_enabled,
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=True,
+    )

@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: codemig
+      POSTGRES_PASSWORD: codemig
+      POSTGRES_DB: code_migration
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codemig -d code_migration"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8090:8090"
+    environment:
+      DATABASE_URL: postgresql://codemig:codemig@postgres:5432/code_migration
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_ORG_ID: ${OPENAI_ORG_ID:-}
+      OPENAI_PROJECT: ${OPENAI_PROJECT:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-120}
+      OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-2}
+      OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-16384}
+      API_HOST: 0.0.0.0
+      API_PORT: 8090
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        API_URL: http://api:8090
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://api:8090
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

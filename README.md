@@ -85,3 +85,4 @@ Conversion uses the [OpenAI Chat Completions API](https://platform.openai.com/do
 | `OPENAI_MAX_OUTPUT_TOKENS` | Max completion tokens (default 16384) |
 
 API responses include `warnings`, `usage` (token counts), and `request_id`. Job history stores token usage and warnings after migration `002_openai_platform.sql`.
+# Code_Migration
