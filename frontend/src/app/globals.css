@@ -231,17 +231,13 @@ body::before {
   animation-delay: 0.12s;
 }
 
-/* Direction remote (compact floating) */
-.direction-remote-floating {
-  font-size: 11px;
-}
-
+/* Direction remote (draggable modal) */
 .direction-remote-floating button:focus-visible {
   outline: 2px solid rgba(139, 92, 246, 0.55);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-.direction-remote-picker button:active {
+.direction-remote-floating button:active:not(:disabled) {
   transform: scale(0.98);
 }
 

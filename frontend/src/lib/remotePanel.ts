@@ -1,13 +1,15 @@
-export const REMOTE_PANEL_STORAGE_KEY = 'cm-remote-panel-v3'
+export const REMOTE_PANEL_STORAGE_KEY = 'cm-remote-panel-v4'
 
 export type RemotePanelState = {
   x: number
   y: number
+  minimized: boolean
 }
 
 export const defaultRemotePanelState: RemotePanelState = {
-  x: 16,
-  y: 96,
+  x: 24,
+  y: 88,
+  minimized: false,
 }
 
 export function loadRemotePanelState(): RemotePanelState {
@@ -19,6 +21,8 @@ export function loadRemotePanelState(): RemotePanelState {
     return {
       x: typeof parsed.x === 'number' ? parsed.x : defaultRemotePanelState.x,
       y: typeof parsed.y === 'number' ? parsed.y : defaultRemotePanelState.y,
+      minimized:
+        typeof parsed.minimized === 'boolean' ? parsed.minimized : defaultRemotePanelState.minimized,
     }
   } catch {
     return defaultRemotePanelState
