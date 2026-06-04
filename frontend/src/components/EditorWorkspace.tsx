@@ -134,6 +134,7 @@ export function EditorWorkspace({
         >
           <CodePanel
             embedded
+            clipboard
             title={ui.source}
             lang={sourceLang}
             value={source}

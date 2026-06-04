@@ -1,8 +1,10 @@
 'use client'
 
-import { GripVertical } from 'lucide-react'
+import { Check, ClipboardPaste, Copy, Eraser, GripVertical, TextSelect } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
 import type { Language } from '@/lib/types'
 import { LANG_META } from '@/lib/types'
+import { ui } from '@/lib/ui'
 
 type Props = {
   title: string
@@ -13,10 +15,10 @@ type Props = {
   placeholder?: string
   lineNumbers?: boolean
   accent?: boolean
-  /** Fill parent flex container (floating window). */
   fill?: boolean
-  /** Strip outer chrome; parent provides drag frame. */
   embedded?: boolean
+  /** Show paste / copy / select-all / clear (editable source). */
+  clipboard?: boolean
   onDragHandlePointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void
 }
 
@@ -31,33 +33,150 @@ export function CodePanel({
   accent,
   fill,
   embedded,
+  clipboard = false,
   onDragHandlePointerDown,
 }: Props) {
   const meta = LANG_META[lang]
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [clipboardMsg, setClipboardMsg] = useState<string | null>(null)
+
   const lines = value ? value.split('\n').length : 1
+  const editable = !readOnly && !!onChange
+
+  const flash = (msg: string) => {
+    setClipboardMsg(msg)
+    window.setTimeout(() => setClipboardMsg(null), 1600)
+  }
+
+  const insertAtCursor = useCallback(
+    (text: string) => {
+      if (!onChange) return
+      const el = textareaRef.current
+      if (!el) {
+        onChange(text)
+        return
+      }
+      const start = el.selectionStart ?? value.length
+      const end = el.selectionEnd ?? value.length
+      const next = value.slice(0, start) + text + value.slice(end)
+      onChange(next)
+      const caret = start + text.length
+      requestAnimationFrame(() => {
+        el.focus()
+        el.setSelectionRange(caret, caret)
+      })
+    },
+    [onChange, value],
+  )
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text) return
+      insertAtCursor(text)
+      flash(ui.pasted)
+    } catch {
+      textareaRef.current?.focus()
+      flash(ui.paste)
+    }
+  }
+
+  const handleCopy = async () => {
+    const el = textareaRef.current
+    const selected =
+      el && el.selectionStart !== el.selectionEnd
+        ? value.slice(el.selectionStart, el.selectionEnd)
+        : value
+    if (!selected) return
+    try {
+      await navigator.clipboard.writeText(selected)
+      flash(ui.copied)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const handleSelectAll = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }
+
+  const handleClear = () => {
+    onChange?.('')
+    textareaRef.current?.focus()
+  }
+
+  const stopWindowDrag = (e: React.PointerEvent | React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
+  const toolbar =
+    clipboard && editable ? (
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-white/[0.06] bg-black/20 shrink-0">
+        <button type="button" onClick={handlePaste} className="editor-clip-btn" title={ui.paste}>
+          <ClipboardPaste className="w-3.5 h-3.5" />
+          <span>{ui.paste}</span>
+        </button>
+        <button type="button" onClick={handleCopy} className="editor-clip-btn" title={ui.copySource}>
+          <Copy className="w-3.5 h-3.5" />
+          <span>{ui.copySource}</span>
+        </button>
+        <button type="button" onClick={handleSelectAll} className="editor-clip-btn" title={ui.selectAll}>
+          <TextSelect className="w-3.5 h-3.5" />
+          <span>{ui.selectAll}</span>
+        </button>
+        <button type="button" onClick={handleClear} className="editor-clip-btn" title={ui.clearSource}>
+          <Eraser className="w-3.5 h-3.5" />
+          <span>{ui.clearSource}</span>
+        </button>
+        {clipboardMsg && (
+          <span className="ml-auto text-[10px] text-emerald-400 flex items-center gap-1 pr-1">
+            <Check className="w-3 h-3" />
+            {clipboardMsg}
+          </span>
+        )}
+      </div>
+    ) : null
 
   const editorBody = (
-    <div className={`flex flex-1 min-h-0 bg-[#0a0f1a]/80 ${embedded ? 'h-full' : ''}`}>
-      {lineNumbers && (
-        <div
-          className="select-none py-4 px-3 text-right text-slate-600 code-editor text-[11px] border-r border-white/[0.04] min-w-[2.75rem] leading-[1.65] shrink-0 overflow-hidden"
-          aria-hidden
-        >
-          {Array.from({ length: Math.max(lines, 8) }, (_, i) => (
-            <div key={i}>{i + 1}</div>
-          ))}
-        </div>
-      )}
-      <textarea
-        className={`code-editor flex-1 w-full min-h-0 px-4 py-4 bg-transparent resize-none ${
-          readOnly ? 'text-slate-300' : 'text-slate-200'
-        }`}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        spellCheck={false}
-      />
+    <div
+      className={`flex flex-col flex-1 min-h-0 bg-[#0a0f1a]/80 ${embedded ? 'h-full' : ''}`}
+      onPointerDown={stopWindowDrag}
+      onMouseDown={stopWindowDrag}
+    >
+      {toolbar}
+      <div className="flex flex-1 min-h-0">
+        {lineNumbers && (
+          <div
+            className="select-none py-4 px-3 text-right text-slate-600 code-editor text-[11px] border-r border-white/[0.04] min-w-[2.75rem] leading-[1.65] shrink-0 overflow-hidden"
+            aria-hidden
+          >
+            {Array.from({ length: Math.max(lines, 8) }, (_, i) => (
+              <div key={i}>{i + 1}</div>
+            ))}
+          </div>
+        )}
+        <textarea
+          ref={textareaRef}
+          className={`code-editor flex-1 w-full min-h-0 px-4 py-4 bg-transparent resize-none select-text ${
+            readOnly ? 'text-slate-300 cursor-default' : 'text-slate-200 cursor-text'
+          }`}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          onPaste={(e) => {
+            if (!editable) return
+            e.stopPropagation()
+          }}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+      </div>
     </div>
   )
 
