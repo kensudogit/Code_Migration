@@ -138,10 +138,10 @@ export function MigrationStudio() {
       <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 py-6 sm:py-8">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 lg:gap-8">
           <div className="space-y-6 lg:space-y-8">
-            <section className="surface rounded-xl p-2.5 sm:p-3 fade-up">
-              <p className="section-label m-0 mb-1.5 px-0.5 flex items-center gap-1.5">
+            <section className="fade-up">
+              <p className="section-label m-0 mb-2 px-0.5 flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-violet-400" aria-hidden />
-                Step 1 · {ui.selectDirection}
+                Step 1
               </p>
               <DirectionRemoteModal
                 directions={directions}

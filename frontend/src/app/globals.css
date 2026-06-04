@@ -231,19 +231,33 @@ body::before {
   animation-delay: 0.12s;
 }
 
-/* Direction remote (compact inline) */
-.direction-remote-compact {
-  max-width: 100%;
-  max-height: 5.5rem;
+/* Direction remote (scenario-style panel) */
+.direction-remote-panel {
+  max-width: 28rem;
 }
 
-.remote-key-compact:active {
+.direction-remote-grid {
+  max-height: 15rem;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.direction-remote-card {
+  min-height: 4.25rem;
+}
+
+.direction-remote-card:active {
   transform: scale(0.98);
 }
 
-.remote-key-compact:focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.5);
-  outline-offset: 1px;
+.direction-remote-card:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.55);
+  outline-offset: 2px;
+}
+
+.direction-remote-collapsed:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.55);
+  outline-offset: 2px;
 }
 
 /* Scrollbar */
