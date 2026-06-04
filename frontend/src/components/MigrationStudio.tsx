@@ -6,7 +6,7 @@ import { convertCode, getDirections, getHealth, listJobs } from '@/lib/api'
 import type { ConvertResponse, DirectionId, DirectionInfo, HealthResponse, JobSummary } from '@/lib/types'
 import { SAMPLE_CODE } from '@/lib/types'
 import { ui } from '@/lib/ui'
-import { DirectionGrid } from '@/components/DirectionGrid'
+import { DirectionRemoteModal } from '@/components/DirectionRemoteModal'
 import { CodePanel } from '@/components/CodePanel'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { StatusPills } from '@/components/StatusPills'
@@ -104,7 +104,11 @@ export function MigrationStudio() {
               <Sparkles className="w-4 h-4 text-indigo-400" />
               <h2 className="text-sm font-semibold text-slate-200 m-0">{ui.selectDirection}</h2>
             </div>
-            <DirectionGrid directions={directions} selected={direction} onSelect={onDirectionChange} />
+            <DirectionRemoteModal
+              directions={directions}
+              selected={direction}
+              onSelect={onDirectionChange}
+            />
           </section>
 
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[420px]">

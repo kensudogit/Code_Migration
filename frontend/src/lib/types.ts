@@ -62,7 +62,7 @@ export type JobDetail = JobSummary & {
 }
 
 export const LANG_META: Record<Language, { label: string; color: string; icon: string }> = {
-  java: { label: 'Java', color: '#f89820', icon: '?' },
+  java: { label: 'Java', color: '#f89820', icon: 'Jv' },
   python: { label: 'Python', color: '#3776ab', icon: '??' },
   typescript: { label: 'TypeScript', color: '#3178c6', icon: 'TS' },
   cobol: { label: 'COBOL', color: '#0051a5', icon: 'CB' },

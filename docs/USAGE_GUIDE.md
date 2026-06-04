@@ -26,14 +26,18 @@
 
 ## 基本操作（コード変換）
 
-### 1. 変換方向を選ぶ
+### 1. 変換方向を選ぶ（リモコンモーダル）
 
-画面上部の **「変換方向を選択」** から、次のいずれかを選びます。
+画面上部の **変換方向エリア** をタップすると **CONVERT REMOTE**（リモコン風モーダル）が開きます。次の 6 ボタンから選びます（`→` は変換の向き）。
 
-- Java → Python / TypeScript
-- Python → Java
-- TypeScript → Java
-- COBOL → Java
+| ボタン | 意味 |
+|--------|------|
+| Java → Python | Java を Python に変換 |
+| Python → Java | Python を Java に変換 |
+| Java → TypeScript | Java を TypeScript に変換 |
+| TypeScript → Java | TypeScript を Java に変換 |
+| COBOL → Java | COBOL を Java に変換 |
+| Java → COBOL | Java を COBOL に変換 |
 
 方向を変えると、サンプルソースが自動で読み込まれます。
 

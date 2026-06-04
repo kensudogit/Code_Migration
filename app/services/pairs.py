@@ -34,7 +34,7 @@ class ConversionDirection(str, Enum):
             Language.TYPESCRIPT: "TypeScript",
             Language.COBOL: "COBOL",
         }
-        return f"{labels[self.source]} ? {labels[self.target]}"
+        return f"{labels[self.source]} \u2192 {labels[self.target]}"
 
 
 SUPPORTED_DIRECTIONS: list[ConversionDirection] = list(ConversionDirection)

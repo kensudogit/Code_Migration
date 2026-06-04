@@ -4,6 +4,12 @@ export const ui = {
     'Java \u21c4 Python, Java \u21c4 TypeScript, COBOL \u21c4 Java \u2014 AI-powered migration studio',
   appSubtitle: 'AI \u30b3\u30fc\u30c9\u5909\u63db\u30b9\u30bf\u30b8\u30aa',
   selectDirection: '\u5909\u63db\u65b9\u5411\u3092\u9078\u629e',
+  remoteTitle: 'CONVERT REMOTE',
+  remoteOpen: 'OPEN',
+  remoteClose: '\u30ea\u30e2\u30b3\u30f3\u3092\u9589\u3058\u308b',
+  remoteTapToOpen: '\u73fe\u5728\u306e\u65b9\u5411',
+  remoteHint:
+    '6 \u65b9\u5411\u304b\u3089\u9078\u629e\u3057\u307e\u3059\u3002\u8868\u793a\u306f \u2192 \uff08\u5909\u63db\u5148 \u2192 \u5909\u63db\u5148\uff09\u3067\u3059\u3002',
   source: '\u30bd\u30fc\u30b9',
   result: '\u5909\u63db\u7d50\u679c',
   resultPlaceholder: '\u5909\u63db\u7d50\u679c\u304c\u3053\u3053\u306b\u8868\u793a\u3055\u308c\u307e\u3059',
