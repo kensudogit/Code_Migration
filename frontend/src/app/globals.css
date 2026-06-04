@@ -234,10 +234,16 @@ body::before {
 /* Direction remote (compact inline) */
 .direction-remote-compact {
   max-width: 100%;
+  max-height: 5.5rem;
 }
 
 .remote-key-compact:active {
   transform: scale(0.98);
+}
+
+.remote-key-compact:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 1px;
 }
 
 /* Scrollbar */
