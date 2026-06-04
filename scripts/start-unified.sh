@@ -15,6 +15,9 @@ if [ -z "${DATABASE_URL:-}" ] && [ -n "${DATABASE_PRIVATE_URL:-}" ]; then
 fi
 
 echo "[unified] web=${WEB_PORT} api=${API_PORT}"
+node --version 2>/dev/null || echo "[unified] WARNING: node not in PATH"
+python --version 2>/dev/null || true
+
 if [ -n "${DATABASE_URL:-}" ]; then
   echo "[unified] DATABASE_URL=set"
 else
@@ -94,6 +97,18 @@ API_PID="$(start_api)"
 
 echo "[unified] starting Next.js on 0.0.0.0:${WEB_PORT} (Railway healthcheck -> /health/live)"
 cd /app/frontend
+
+if [ ! -d .next ]; then
+  echo "[unified] ERROR: missing .next build output in /app/frontend"
+  ls -la . 2>/dev/null || true
+  exit 1
+fi
+
+if [ ! -f ./node_modules/next/dist/bin/next ]; then
+  echo "[unified] ERROR: next binary missing — run npm ci on target platform (see Dockerfile.unified)"
+  exit 1
+fi
+
 export PORT="${WEB_PORT}"
 export HOSTNAME=0.0.0.0
-exec node ./node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port "${WEB_PORT}"
+exec npm run start
