@@ -61,6 +61,8 @@ export const ui = {
   featureDirsDesc: 'Java / Python / TS / COBOL \u76f8\u4e92\u5909\u63db',
   history: '\u5909\u63db\u5c65\u6b74',
   historyEmpty: '\u307e\u3060\u5909\u63db\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093',
+  historyCollapse: '\u5909\u63db\u5c65\u6b74\u3092\u9589\u3058\u308b',
+  historyExpand: '\u5909\u63db\u5c65\u6b74\u3092\u958b\u304f',
   refresh: '\u66f4\u65b0',
   footer: 'Code Migration \u00b7 FastAPI + PostgreSQL + Next.js',
   postgres: 'PostgreSQL',

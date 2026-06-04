@@ -38,6 +38,7 @@ export function MigrationStudio() {
   )
   const [progress, setProgress] = useState<string | null>(null)
   const [autoDirectionNote, setAutoDirectionNote] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(true)
 
   const refreshMeta = useCallback(async () => {
     const [h, dirs, j] = await Promise.all([getHealth(), getDirections(), listJobs(12)])
@@ -139,7 +140,11 @@ export function MigrationStudio() {
       </header>
 
       <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 py-6 sm:py-8">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 lg:gap-8">
+        <div
+          className={`grid grid-cols-1 gap-6 lg:gap-8 ${
+            historyOpen ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : 'xl:grid-cols-1'
+          }`}
+        >
           <div className="space-y-6 lg:space-y-8">
             <section className="fade-up fade-up-delay-1 mt-4">
               <div className="flex items-center gap-2 mb-3 px-1">
@@ -248,8 +253,17 @@ export function MigrationStudio() {
             </section>
           </div>
 
-          <aside className="fade-up fade-up-delay-2 xl:sticky xl:top-[5.5rem] xl:self-start">
-            <HistoryPanel jobs={jobs} onRefresh={refreshMeta} onApplyResult={onApplyHistoryResult} />
+          <aside
+            className={`fade-up fade-up-delay-2 xl:sticky xl:top-[5.5rem] xl:self-start ${
+              historyOpen ? '' : 'xl:flex xl:justify-end'
+            }`}
+          >
+            <HistoryPanel
+              jobs={jobs}
+              onRefresh={refreshMeta}
+              onApplyResult={onApplyHistoryResult}
+              onOpenChange={setHistoryOpen}
+            />
           </aside>
         </div>
       </main>

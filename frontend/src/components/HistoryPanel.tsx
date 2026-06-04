@@ -1,8 +1,9 @@
 'use client'
 
-import { Clock, History, RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronLeft, ChevronRight, Clock, History, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { getJob } from '@/lib/api'
+import { loadHistoryPanelOpen, saveHistoryPanelOpen } from '@/lib/historyPanel'
 import type { JobSummary } from '@/lib/types'
 import { LANG_META } from '@/lib/types'
 import { ui } from '@/lib/ui'
@@ -11,13 +12,34 @@ type Props = {
   jobs: JobSummary[]
   onRefresh: () => Promise<void>
   onApplyResult?: (code: string) => void
+  onOpenChange?: (open: boolean) => void
 }
 
-export function HistoryPanel({ jobs, onRefresh, onApplyResult }: Props) {
+export function HistoryPanel({ jobs, onRefresh, onApplyResult, onOpenChange }: Props) {
+  const [panelOpen, setPanelOpen] = useState(true)
+  const [hydrated, setHydrated] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [expandedStatus, setExpandedStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    const open = loadHistoryPanelOpen()
+    setPanelOpen(open)
+    onOpenChange?.(open)
+    setHydrated(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, [])
+
+  const setOpen = (open: boolean) => {
+    setPanelOpen(open)
+    saveHistoryPanelOpen(open)
+    onOpenChange?.(open)
+    if (!open) {
+      setExpanded(null)
+      setDetail(null)
+    }
+  }
 
   const refresh = async () => {
     setRefreshing(true)
@@ -45,28 +67,68 @@ export function HistoryPanel({ jobs, onRefresh, onApplyResult }: Props) {
     onApplyResult(detail)
   }
 
-  return (
-    <div className="surface rounded-2xl overflow-hidden flex flex-col max-h-[calc(100vh-7rem)]">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-            <History className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div>
-            <p className="section-label m-0">Timeline</p>
-            <h3 className="text-sm font-semibold text-slate-100 m-0">{ui.history}</h3>
-          </div>
-        </div>
+  if (!hydrated) {
+    return <div className="hidden xl:block w-[340px] shrink-0" aria-hidden />
+  }
+
+  if (!panelOpen) {
+    return (
+      <div className="flex justify-end xl:justify-start">
         <button
           type="button"
-          onClick={refresh}
-          className="p-2 rounded-xl border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
-          aria-label={ui.refresh}
+          onClick={() => setOpen(true)}
+          className="group flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-[#0f111a]/95 px-2 py-3 xl:py-4 xl:px-2 xl:flex-col shadow-lg shadow-black/30 hover:border-cyan-400/40 transition-colors"
+          aria-label={ui.historyExpand}
+          title={ui.historyExpand}
         >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <History className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span className="text-[10px] font-bold text-slate-300 xl:[writing-mode:vertical-rl] xl:tracking-wide">
+            {ui.history}
+          </span>
+          {jobs.length > 0 && (
+            <span className="text-[10px] font-bold rounded-full bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 min-w-[1.25rem] text-center">
+              {jobs.length > 99 ? '99+' : jobs.length}
+            </span>
+          )}
+          <ChevronLeft className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 hidden xl:block" />
         </button>
       </div>
-      <ul className="overflow-y-auto flex-1 p-3 space-y-1.5">
+    )
+  }
+
+  return (
+    <div className="surface rounded-2xl overflow-hidden flex flex-col max-h-[calc(100vh-7rem)] w-full xl:w-[340px]">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
+            <History className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="section-label m-0">Timeline</p>
+            <h3 className="text-sm font-semibold text-slate-100 m-0 truncate">{ui.history}</h3>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={refresh}
+            className="p-2 rounded-xl border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+            aria-label={ui.refresh}
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="p-2 rounded-xl border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+            aria-label={ui.historyCollapse}
+            title={ui.historyCollapse}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      <ul className="overflow-y-auto flex-1 p-3 space-y-1.5 min-h-[8rem]">
         {jobs.length === 0 ? (
           <li className="text-sm text-slate-500 text-center py-12 px-6 leading-relaxed">{ui.historyEmpty}</li>
         ) : (
