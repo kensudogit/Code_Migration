@@ -36,6 +36,7 @@ export function MigrationStudio() {
   const [meta, setMeta] = useState<Pick<ConvertResponse, 'warnings' | 'notes' | 'usage' | 'request_id'> | null>(
     null,
   )
+  const [progress, setProgress] = useState<string | null>(null)
 
   const refreshMeta = useCallback(async () => {
     const [h, dirs, j] = await Promise.all([getHealth(), getDirections(), listJobs(12)])
@@ -63,8 +64,9 @@ export function MigrationStudio() {
     }
     setLoading(true)
     setError(null)
+    setProgress(null)
     try {
-      const res = await convertCode(direction, source)
+      const res = await convertCode(direction, source, setProgress)
       setResult(res.result_code)
       setMockMode(res.mock)
       setMeta({
@@ -78,8 +80,13 @@ export function MigrationStudio() {
       setError(e instanceof Error ? e.message : ui.convertFailed)
     } finally {
       setLoading(false)
+      setProgress(null)
     }
   }
+
+  const looksLikePython =
+    direction === 'java_to_python' &&
+    /^\s*(#|"""|'''|from |import |def |async def |class )/m.test(source.slice(0, 800))
 
   const onCopy = async () => {
     if (!result) return
@@ -172,6 +179,14 @@ export function MigrationStudio() {
                 </span>
               )}
             </div>
+
+            {looksLikePython && !loading && (
+              <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintPython}</p>
+            )}
+
+            {loading && progress && (
+              <p className="text-xs text-slate-400 m-0 px-1 animate-pulse">{progress}</p>
+            )}
 
             {error && (
               <div

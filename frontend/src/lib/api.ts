@@ -1,5 +1,6 @@
 import type {
   ConvertResponse,
+  DirectionId,
   DirectionInfo,
   HealthResponse,
   JobDetail,
@@ -8,8 +9,14 @@ import type {
 
 const BASE = '/api/v1'
 
-/** Large multi-chunk conversions (e.g. 2500+ lines) can take 10+ minutes. */
-const CONVERT_TIMEOUT_MS = 900_000
+const START_TIMEOUT_MS = 120_000
+const POLL_TIMEOUT_MS = 30_000
+const POLL_INTERVAL_MS = 2000
+const POLL_MAX_MS = 900_000
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function formatApiError(body: string, status: number): string {
   if (!body.trim()) {
@@ -76,12 +83,70 @@ export function getDirections() {
   return fetchJson<{ directions: DirectionInfo[] }>('/directions').then((r) => r.directions)
 }
 
-export function convertCode(direction: string, sourceCode: string) {
-  return fetchJson<ConvertResponse>('/convert', {
+/** Background job + polling so large files are not cut off by proxy timeouts. */
+export async function convertCode(
+  direction: string,
+  sourceCode: string,
+  onProgress?: (message: string | null) => void,
+): Promise<ConvertResponse> {
+  onProgress?.('ジョブを開始しています…')
+
+  const started = await fetchJson<{ job_id: string; status: string }>('/convert/async', {
     method: 'POST',
     body: JSON.stringify({ direction, source_code: sourceCode, save_history: true }),
-    signal: AbortSignal.timeout(CONVERT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(START_TIMEOUT_MS),
   })
+
+  const jobId = started.job_id
+  const deadline = Date.now() + POLL_MAX_MS
+  let polls = 0
+
+  while (Date.now() < deadline) {
+    await sleep(polls === 0 ? 500 : POLL_INTERVAL_MS)
+    polls++
+
+    const job = await fetchJson<JobDetail>(`/jobs/${jobId}`, {
+      signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+    })
+
+    if (job.status === 'running') {
+      onProgress?.(job.progress ?? `変換中… (${polls} 回目の確認)`)
+      continue
+    }
+
+    if (job.status === 'completed') {
+      onProgress?.(null)
+      const code = job.result_code?.trim()
+      if (!code) {
+        throw new Error('変換は完了しましたが結果コードが空です。ログを確認してください。')
+      }
+      return {
+        job_id: job.id,
+        direction: job.direction as DirectionId,
+        source_language: job.source_language as ConvertResponse['source_language'],
+        target_language: job.target_language as ConvertResponse['target_language'],
+        result_code: code,
+        model: job.model ?? 'unknown',
+        mock: job.mock ?? false,
+        warnings: job.warnings ?? [],
+        notes: job.notes ?? null,
+        usage: null,
+        request_id: job.openai_request_id ?? null,
+      }
+    }
+
+    if (job.status === 'failed') {
+      onProgress?.(null)
+      throw new Error(job.error_message || '変換に失敗しました')
+    }
+
+    onProgress?.(`ステータス: ${job.status}`)
+  }
+
+  onProgress?.(null)
+  throw new Error(
+    '変換がタイムアウトしました。大きなファイルは15分以上かかる場合があります。しばらく待ってから履歴を確認してください。',
+  )
 }
 
 export function listJobs(limit = 20) {

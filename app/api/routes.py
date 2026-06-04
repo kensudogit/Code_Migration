@@ -9,6 +9,7 @@ from app import repository
 from app.config import settings
 from app.db import ping
 from app.schemas import (
+    ConvertAsyncResponse,
     ConvertRequest,
     ConvertResponse,
     DirectionInfo,
@@ -18,12 +19,42 @@ from app.schemas import (
     JobSummary,
     TokenUsage,
 )
+from app.services import job_runner
 from app.services.converter import convert_code
 from app.services.openai_platform import OpenAIPlatformError
 from app.services.pairs import SUPPORTED_DIRECTIONS, ConversionDirection, resolve_direction
 
 router = APIRouter()
 logger = logging.getLogger("code-migration.routes")
+
+
+def _resolve_direction_or_400(body: ConvertRequest) -> ConversionDirection:
+    direction: ConversionDirection | None = body.direction
+    if direction is None:
+        if body.source_language is None or body.target_language is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide direction or both source_language and target_language",
+            )
+        direction = resolve_direction(body.source_language, body.target_language)
+        if direction is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported language pair. Use GET /directions for supported conversions.",
+            )
+    return direction
+
+
+def _check_source_size(body: ConvertRequest) -> None:
+    max_bytes = settings.source_code_max_bytes
+    if max_bytes > 0:
+        size = len(body.source_code.encode("utf-8"))
+        if size > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Source code exceeds limit ({size} > {max_bytes} bytes). "
+                "Set SOURCE_CODE_MAX_BYTES=0 for unlimited.",
+            )
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -58,31 +89,26 @@ def list_directions() -> DirectionsResponse:
     return DirectionsResponse(directions=items)
 
 
+@router.post("/convert/async", response_model=ConvertAsyncResponse)
+async def convert_async(body: ConvertRequest) -> ConvertAsyncResponse:
+    """Start conversion in the background; poll GET /jobs/{job_id} for the result."""
+    _check_source_size(body)
+    try:
+        _resolve_direction_or_400(body)
+    except HTTPException:
+        raise
+    try:
+        job_id = await job_runner.start(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ConvertAsyncResponse(job_id=job_id, status="running")
+
+
 @router.post("/convert", response_model=ConvertResponse)
 async def convert(body: ConvertRequest) -> ConvertResponse:
-    max_bytes = settings.source_code_max_bytes
-    if max_bytes > 0:
-        size = len(body.source_code.encode("utf-8"))
-        if size > max_bytes:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Source code exceeds limit ({size} > {max_bytes} bytes). "
-                "Set SOURCE_CODE_MAX_BYTES=0 for unlimited.",
-            )
-
-    direction: ConversionDirection | None = body.direction
-    if direction is None:
-        if body.source_language is None or body.target_language is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide direction or both source_language and target_language",
-            )
-        direction = resolve_direction(body.source_language, body.target_language)
-        if direction is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Unsupported language pair. Use GET /directions for supported conversions.",
-            )
+    """Synchronous conversion (small sources). Large jobs should use POST /convert/async."""
+    _check_source_size(body)
+    direction = _resolve_direction_or_400(body)
 
     job_id = None
     model_name = settings.openai_model if settings.ai_enabled else "mock"
@@ -157,7 +183,7 @@ def jobs(limit: int = 50) -> list[JobSummary]:
 
 @router.get("/jobs/{job_id}", response_model=JobDetail)
 def job_detail(job_id: UUID) -> JobDetail:
-    row = repository.get_job(job_id)
+    row = job_runner.get_job(job_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return JobDetail(**row)

@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     openai_auto_chunk: bool = True
     # Characters per chunk when auto-chunking; 0 disables splitting even if auto_chunk is true
     # Keep chunks small enough that JSON + converted_code fits in max output tokens
-    openai_chunk_chars: int = 16_000
+    openai_chunk_chars: int = 12_000
     api_host: str = "0.0.0.0"
     api_port: int = 8090
 

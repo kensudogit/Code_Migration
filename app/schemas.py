@@ -44,6 +44,12 @@ class TokenUsage(BaseModel):
     total_tokens: int | None = None
 
 
+class ConvertAsyncResponse(BaseModel):
+    job_id: UUID
+    status: str = "running"
+    message: str = "Conversion started. Poll GET /jobs/{job_id} until status is completed or failed."
+
+
 class ConvertResponse(BaseModel):
     job_id: UUID | None
     direction: ConversionDirection
@@ -76,8 +82,11 @@ class JobSummary(BaseModel):
 
 
 class JobDetail(JobSummary):
-    source_code: str
-    result_code: str | None
-    error_message: str | None
+    source_code: str = ""
+    result_code: str | None = None
+    error_message: str | None = None
     warnings: list[str] | None = None
     openai_request_id: str | None = None
+    progress: str | None = None
+    mock: bool = False
+    notes: str | None = None

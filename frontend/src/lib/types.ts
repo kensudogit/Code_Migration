@@ -59,6 +59,10 @@ export type JobDetail = JobSummary & {
   source_code: string
   result_code: string | null
   error_message: string | null
+  warnings?: string[] | null
+  progress?: string | null
+  mock?: boolean
+  notes?: string | null
 }
 
 export const LANG_META: Record<Language, { label: string; color: string; icon: string }> = {
