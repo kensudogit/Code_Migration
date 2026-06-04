@@ -7,6 +7,7 @@ import {
   defaultEditorWindows,
   EDITOR_WINDOWS_STORAGE_KEY,
   loadEditorWindows,
+  workspaceHeightFor,
   type EditorWindowId,
   type EditorWindowRect,
   type EditorWindowsState,
@@ -65,9 +66,7 @@ export function EditorWorkspace({
     localStorage.setItem(EDITOR_WINDOWS_STORAGE_KEY, JSON.stringify(windows))
   }, [windows, hydrated])
 
-  const workspaceHeight = windows
-    ? Math.max(440, Math.max(windows.source.y + windows.source.h, windows.result.y + windows.result.h) + 24)
-    : 480
+  const workspaceHeight = windows ? workspaceHeightFor(windows) : 360
 
   useEffect(() => {
     setContainerSize((prev) => ({ ...prev, h: workspaceHeight }))
@@ -116,7 +115,7 @@ export function EditorWorkspace({
 
       <div
         className="relative w-full rounded-2xl border border-dashed border-white/[0.08] bg-[#050810]/50 overflow-hidden"
-        style={{ height: workspaceHeight, minHeight: 440 }}
+        style={{ height: workspaceHeight, minHeight: 360 }}
       >
         {!hydrated || !windows ? (
           <div className="absolute inset-0 animate-pulse bg-white/[0.02]" aria-hidden />

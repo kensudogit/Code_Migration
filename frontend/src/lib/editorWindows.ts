@@ -13,24 +13,76 @@ export type EditorWindowsState = {
   result: EditorWindowRect
 }
 
-export const EDITOR_WINDOWS_STORAGE_KEY = 'code-migration-editor-windows-v1'
+/** Bump when default layout changes (clears old overlapping positions). */
+export const EDITOR_WINDOWS_STORAGE_KEY = 'code-migration-editor-windows-v2'
 
-const MIN_W = 260
-const MIN_H = 200
+const MIN_W = 240
+const MIN_H = 180
+const PAD = 12
+const GAP = 12
+const DEFAULT_WINDOW_H = 280
+const STACK_BREAKPOINT = 760
 
 export function getEditorMinSize() {
   return { minW: MIN_W, minH: MIN_H }
 }
 
+function rectsOverlap(a: EditorWindowRect, b: EditorWindowRect): boolean {
+  const ax2 = a.x + a.w
+  const ay2 = a.y + a.h
+  const bx2 = b.x + b.w
+  const by2 = b.y + b.h
+  return a.x < bx2 && ax2 > b.x && a.y < by2 && ay2 > b.y
+}
+
 export function defaultEditorWindows(containerWidth: number): EditorWindowsState {
-  const pad = 0
-  const gap = 16
-  const half = Math.floor((containerWidth - gap) / 2)
-  const h = 420
-  return {
-    source: { x: pad, y: pad, w: Math.max(MIN_W, half), h, z: 1 },
-    result: { x: pad + half + gap, y: pad, w: Math.max(MIN_W, half), h, z: 2 },
+  const usable = Math.max(MIN_W * 2 + GAP, containerWidth - PAD * 2)
+
+  if (usable < STACK_BREAKPOINT) {
+    const w = usable
+    const h = Math.min(DEFAULT_WINDOW_H, 240)
+    return {
+      source: { x: PAD, y: PAD, w, h, z: 1 },
+      result: { x: PAD, y: PAD + h + GAP, w, h, z: 2 },
+    }
   }
+
+  const half = Math.floor((usable - GAP) / 2)
+  const h = DEFAULT_WINDOW_H
+  return {
+    source: { x: PAD, y: PAD, w: Math.max(MIN_W, half), h, z: 1 },
+    result: { x: PAD + half + GAP, y: PAD, w: Math.max(MIN_W, half), h, z: 2 },
+  }
+}
+
+export function normalizeEditorWindows(
+  state: EditorWindowsState,
+  containerWidth: number,
+): EditorWindowsState {
+  const def = defaultEditorWindows(containerWidth)
+  const source = {
+    ...state.source,
+    w: Math.max(MIN_W, state.source.w),
+    h: Math.max(MIN_H, state.source.h),
+  }
+  const result = {
+    ...state.result,
+    w: Math.max(MIN_W, state.result.w),
+    h: Math.max(MIN_H, state.result.h),
+  }
+  const merged = { source, result }
+  if (rectsOverlap(source, result)) {
+    return def
+  }
+  return {
+    source: clampRectToContainer(source, containerWidth, workspaceHeightFor(merged)),
+    result: clampRectToContainer(result, containerWidth, workspaceHeightFor(merged)),
+  }
+}
+
+export function workspaceHeightFor(windows: EditorWindowsState): number {
+  const bottom = Math.max(windows.source.y + windows.source.h, windows.result.y + windows.result.h)
+  return Math.max(360, bottom + PAD + 8)
 }
 
 export function loadEditorWindows(containerWidth: number): EditorWindowsState {
@@ -47,10 +99,13 @@ export function loadEditorWindows(containerWidth: number): EditorWindowsState {
       h: typeof r?.h === 'number' ? Math.max(MIN_H, r.h) : fb.h,
       z: typeof r?.z === 'number' ? r.z : fb.z,
     })
-    return {
-      source: fix(parsed.source, fallback.source),
-      result: fix(parsed.result, fallback.result),
-    }
+    return normalizeEditorWindows(
+      {
+        source: fix(parsed.source, fallback.source),
+        result: fix(parsed.result, fallback.result),
+      },
+      containerWidth,
+    )
   } catch {
     return defaultEditorWindows(containerWidth)
   }

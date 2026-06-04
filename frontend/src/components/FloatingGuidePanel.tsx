@@ -44,7 +44,12 @@ export function FloatingGuidePanel() {
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
 
   useEffect(() => {
-    setState(loadState())
+    const loaded = loadState()
+    if (typeof window !== 'undefined' && loaded.y < 200) {
+      loaded.y = Math.max(80, window.innerHeight - 420)
+      loaded.x = Math.max(16, window.innerWidth - 360)
+    }
+    setState(loaded)
     setHydrated(true)
   }, [])
 
