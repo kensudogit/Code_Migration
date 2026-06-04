@@ -1,4 +1,4 @@
-export const REMOTE_PANEL_STORAGE_KEY = 'cm-remote-panel-v2'
+export const REMOTE_PANEL_STORAGE_KEY = 'cm-remote-panel-v3'
 
 export type RemotePanelState = {
   x: number

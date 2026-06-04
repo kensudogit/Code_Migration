@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, GripVertical, Radio, Sparkles } from 'lucide-react'
+import { ChevronRight, GripVertical, Radio } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { displayDirectionLabel, formatDirectionLabel } from '@/lib/directionFormat'
 import { clampFloatingPosition } from '@/lib/floatingPosition'
@@ -13,6 +13,13 @@ import {
 import type { DirectionId, DirectionInfo, Language } from '@/lib/types'
 import { LANG_META } from '@/lib/types'
 import { ui } from '@/lib/ui'
+
+const SHORT_LANG: Record<Language, string> = {
+  java: 'Java',
+  python: 'Py',
+  typescript: 'TS',
+  cobol: 'CB',
+}
 
 const FALLBACK_DIRECTIONS: DirectionInfo[] = (
   [
@@ -36,7 +43,7 @@ type Props = {
   onSelect: (id: DirectionId) => void
 }
 
-/** Draggable floating direction remote (compact bar + picker popover). */
+/** Compact draggable floating direction remote. */
 export function DirectionRemoteModal({ directions, selected, onSelect }: Props) {
   const items = directions.length > 0 ? directions : FALLBACK_DIRECTIONS
   const current = items.find((d) => d.id === selected) ?? items[0]
@@ -48,11 +55,7 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
 
   useEffect(() => {
-    const loaded = loadRemotePanelState()
-    if (typeof window !== 'undefined' && loaded.y < 72) {
-      loaded.y = 96
-    }
-    setPos(loaded)
+    setPos(loadRemotePanelState())
     setHydrated(true)
   }, [])
 
@@ -92,8 +95,8 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
     const el = panelRef.current
-    const w = el?.offsetWidth ?? 480
-    const h = el?.offsetHeight ?? 120
+    const w = el?.offsetWidth ?? 280
+    const h = el?.offsetHeight ?? 44
     const next = clampFloatingPosition(
       dragRef.current.originX + dx,
       dragRef.current.originY + dy,
@@ -120,96 +123,84 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
   return (
     <div
       ref={panelRef}
-      className="direction-remote-floating fixed z-[190] flex flex-col rounded-xl border border-violet-500/20 bg-[#0f111a]/98 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+      className="direction-remote-floating fixed z-[190] rounded-lg border border-violet-500/25 bg-[#0f111a]/98 shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl"
       style={{
         left: pos.x,
         top: pos.y,
-        width: 'min(560px, calc(100vw - 16px))',
+        width: 'min(300px, calc(100vw - 16px))',
       }}
       role="group"
       aria-label={ui.remoteTitle}
     >
       <div
-        className="flex items-center gap-1 px-2 py-2 border-b border-white/[0.06] bg-[#1a1d2e]/90 cursor-grab active:cursor-grabbing select-none touch-none rounded-t-xl"
+        className="flex items-center gap-1 px-1.5 py-1 cursor-grab active:cursor-grabbing select-none touch-none rounded-lg"
         onPointerDown={onPointerDownDrag}
         onPointerMove={onPointerMoveDrag}
         onPointerUp={onPointerUpDrag}
         onPointerCancel={onPointerUpDrag}
         title={ui.remoteDragHint}
       >
-        <GripVertical className="w-4 h-4 text-slate-600 shrink-0" aria-hidden />
-        <Sparkles className="w-3 h-3 text-violet-400 shrink-0" aria-hidden />
-        <div className="min-w-0 flex-1 px-1">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Step 1</p>
-          <p className="m-0 text-xs font-bold text-slate-200 truncate">{ui.selectDirection}</p>
-        </div>
+        <GripVertical className="w-3 h-3 text-slate-600 shrink-0" aria-hidden />
+
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600"
+          aria-hidden
+        >
+          <Radio className="h-3 w-3 text-white" strokeWidth={2.5} />
+        </span>
+
+        <button
+          type="button"
+          onClick={() => setPickerOpen((o) => !o)}
+          className="min-w-0 flex-1 truncate rounded px-1 py-0.5 text-left hover:bg-white/[0.04] transition-colors"
+          aria-expanded={pickerOpen}
+          aria-haspopup="listbox"
+          title={ui.remoteTapToOpen}
+        >
+          {current && <DirectionColored source={current.source} target={current.target} compact />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setPickerOpen((o) => !o)}
+          className="shrink-0 inline-flex items-center gap-0 rounded-md border border-white/[0.08] bg-[#252836] px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:border-violet-500/40 hover:text-white transition-colors"
+          aria-label={ui.remoteChoose}
+        >
+          {ui.remoteChooseShort}
+          <ChevronRight className="w-3 h-3 opacity-70" aria-hidden />
+        </button>
       </div>
 
-      <div className="px-3 py-2.5 sm:px-3.5">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-violet-500/25 bg-[#1a1d2e] px-3 py-2.5">
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600"
-            aria-hidden
-          >
-            <Radio className="h-4 w-4 text-white" strokeWidth={2.5} />
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setPickerOpen((o) => !o)}
-            className="min-w-0 flex-1 text-left rounded-md hover:bg-white/[0.03] px-1 py-0.5 -mx-1 transition-colors"
-            aria-expanded={pickerOpen}
-            aria-haspopup="listbox"
-          >
-            <p className="m-0 text-[10px] text-slate-500 leading-tight">{ui.remoteTapToOpen}</p>
-            {current && (
-              <DirectionColored source={current.source} target={current.target} className="mt-0.5" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setPickerOpen((o) => !o)}
-            className="shrink-0 inline-flex items-center gap-0.5 rounded-full border border-white/[0.08] bg-[#252836] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-violet-500/40 hover:bg-[#2a2d3d] transition-colors"
-          >
-            {ui.remoteChoose}
-            <ChevronRight className="w-3.5 h-3.5 opacity-70" aria-hidden />
-          </button>
-        </div>
-
-        {pickerOpen && (
-          <ul
-            className="direction-remote-picker m-0 mt-2 p-1 list-none rounded-lg border border-white/[0.08] bg-[#1a1d2e] max-h-48 overflow-y-auto"
-            role="listbox"
-            aria-label={ui.remoteOpen}
-          >
-            {items.map((d) => {
-              const active = d.id === selected
-              const accent = LANG_META[d.source].color
-              return (
-                <li key={d.id} role="option" aria-selected={active}>
-                  <button
-                    type="button"
-                    onClick={() => pickDirection(d.id)}
-                    className={`relative w-full flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                      active
-                        ? 'bg-violet-500/15 text-white'
-                        : 'text-slate-300 hover:bg-white/[0.04]'
-                    }`}
-                  >
-                    <span
-                      className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-sm"
-                      style={{ backgroundColor: accent }}
-                      aria-hidden
-                    />
-                    <span className="pl-2 font-semibold">{displayDirectionLabel(d)}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+      {pickerOpen && (
+        <ul
+          className="direction-remote-picker m-0 border-t border-white/[0.06] p-0.5 list-none max-h-36 overflow-y-auto"
+          role="listbox"
+          aria-label={ui.remoteOpen}
+        >
+          {items.map((d) => {
+            const active = d.id === selected
+            const accent = LANG_META[d.source].color
+            return (
+              <li key={d.id} role="option" aria-selected={active}>
+                <button
+                  type="button"
+                  onClick={() => pickDirection(d.id)}
+                  className={`relative w-full rounded px-2 py-1 text-left text-[11px] font-semibold transition-colors ${
+                    active ? 'bg-violet-500/15 text-white' : 'text-slate-400 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <span
+                    className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-sm"
+                    style={{ backgroundColor: accent }}
+                    aria-hidden
+                  />
+                  <span className="pl-1.5">{displayDirectionLabel(d)}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -217,21 +208,23 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
 function DirectionColored({
   source,
   target,
-  className = '',
+  compact = false,
 }: {
   source: Language
   target: Language
-  className?: string
+  compact?: boolean
 }) {
   const src = LANG_META[source]
   const tgt = LANG_META[target]
+  const srcText = compact ? SHORT_LANG[source] : src.label
+  const tgtText = compact ? SHORT_LANG[target] : tgt.label
   return (
-    <p className={`m-0 text-sm sm:text-base font-bold ${className}`}>
-      <span style={{ color: src.color }}>{src.label}</span>
-      <span className="text-slate-500 font-normal mx-1.5" aria-hidden>
+    <span className="text-[11px] font-bold leading-none whitespace-nowrap">
+      <span style={{ color: src.color }}>{srcText}</span>
+      <span className="text-slate-600 font-normal mx-0.5" aria-hidden>
         {'\u2192'}
       </span>
-      <span style={{ color: tgt.color }}>{tgt.label}</span>
-    </p>
+      <span style={{ color: tgt.color }}>{tgtText}</span>
+    </span>
   )
 }
