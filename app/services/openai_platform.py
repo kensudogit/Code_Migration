@@ -383,12 +383,73 @@ async def _convert_single(
     raise OpenAIPlatformError("Conversion failed.", 502)
 
 
+def _is_truncation_error(exc: OpenAIPlatformError) -> bool:
+    msg = str(exc).lower()
+    return "truncated" in msg or "max output token" in msg
+
+
+async def _convert_part(
+    direction: ConversionDirection,
+    source_code: str,
+    *,
+    part_label: str | None = None,
+    depth: int = 0,
+) -> ConversionResult:
+    """Convert one chunk; on output truncation, split and retry smaller pieces."""
+    try:
+        return await _convert_single(direction, source_code, part_label=part_label)
+    except OpenAIPlatformError as exc:
+        if depth >= 5 or not _is_truncation_error(exc) or len(source_code) < 2000:
+            raise
+
+        target_chars = max(len(source_code) // 2, 4000)
+        subchunks = split_source_lines(source_code, target_chars)
+        if len(subchunks) <= 1:
+            subchunks = split_source_lines(source_code, max(target_chars // 2, 3000))
+        if len(subchunks) <= 1:
+            raise
+
+        parts: list[str] = []
+        warnings = [
+            f"Chunk split into {len(subchunks)} smaller requests because the model output hit the token limit."
+        ]
+        notes_parts: list[str] = []
+        usage: TokenUsage | None = None
+        last_request_id: str | None = None
+
+        for index, sub in enumerate(subchunks, start=1):
+            sub_label = (
+                f"{part_label} — sub-part {index}/{len(subchunks)} (auto-split after truncation)"
+                if part_label
+                else f"Sub-part {index}/{len(subchunks)} (auto-split after truncation)"
+            )
+            sub_result = await _convert_part(direction, sub, part_label=sub_label, depth=depth + 1)
+            parts.append(sub_result.result_code)
+            warnings.extend(sub_result.warnings)
+            if sub_result.notes:
+                notes_parts.append(sub_result.notes)
+            usage = (usage or TokenUsage()).add(sub_result.usage)
+            if sub_result.request_id:
+                last_request_id = sub_result.request_id
+
+        merged = merge_converted_chunks(parts, direction.target.value)
+        return ConversionResult(
+            result_code=merged,
+            model=settings.openai_model,
+            is_mock=False,
+            warnings=warnings,
+            notes="\n".join(notes_parts) if notes_parts else None,
+            usage=usage,
+            request_id=last_request_id,
+        )
+
+
 async def convert_with_openai(direction: ConversionDirection, source_code: str) -> ConversionResult:
     """Call OpenAI; auto-chunk very large sources (no application input cap)."""
     chunks = _chunk_plan(source_code)
 
     if len(chunks) == 1:
-        return await _convert_single(direction, chunks[0])
+        return await _convert_part(direction, chunks[0])
 
     parts: list[str] = []
     all_warnings: list[str] = [
@@ -401,7 +462,7 @@ async def convert_with_openai(direction: ConversionDirection, source_code: str) 
 
     for index, chunk in enumerate(chunks, start=1):
         label = f"This is part {index} of {len(chunks)} of the full source file."
-        part_result = await _convert_single(direction, chunk, part_label=label)
+        part_result = await _convert_part(direction, chunk, part_label=label)
         parts.append(part_result.result_code)
         all_warnings.extend(part_result.warnings)
         if part_result.notes:

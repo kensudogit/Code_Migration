@@ -36,13 +36,14 @@ class Settings(BaseSettings):
     openai_base_url: str = ""
     openai_timeout: float = 300.0
     openai_max_retries: int = 2
-    openai_max_output_tokens: int = 16384
+    openai_max_output_tokens: int = 32768
     # 0 = no application-level cap on conversion source size
     source_code_max_bytes: int = 0
     # Split large sources across multiple OpenAI calls (line-safe chunks)
     openai_auto_chunk: bool = True
     # Characters per chunk when auto-chunking; 0 disables splitting even if auto_chunk is true
-    openai_chunk_chars: int = 80_000
+    # Keep chunks small enough that JSON + converted_code fits in max output tokens
+    openai_chunk_chars: int = 16_000
     api_host: str = "0.0.0.0"
     api_port: int = 8090
 

@@ -25,6 +25,8 @@ export const ui = {
   copySource: '\u30b3\u30d4\u30fc',
   selectAll: '\u5168\u9078\u629e',
   clearSource: '\u30af\u30ea\u30a2',
+  lineCount: '\u884c',
+  scrollToTop: '\u5148\u982d\u3078',
   emptySource: '\u30bd\u30fc\u30b9\u30b3\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044',
   convertFailed: '\u5909\u63db\u306b\u5931\u6557\u3057\u307e\u3057\u305f',
   mockHint:

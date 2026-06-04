@@ -56,7 +56,9 @@ export function CodePanel({
   const meta = LANG_META[lang]
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLPreElement>(null)
+  const prevLineCountRef = useRef(0)
   const [clipboardMsg, setClipboardMsg] = useState<string | null>(null)
+  const [scrollLine, setScrollLine] = useState(1)
 
   const lineCount = useMemo(() => countLines(value), [value])
   const gutterText = useMemo(() => buildLineNumberText(lineCount), [lineCount])
@@ -70,14 +72,28 @@ export function CodePanel({
   const syncGutterScroll = useCallback(() => {
     const ta = textareaRef.current
     const gutter = gutterRef.current
-    if (ta && gutter) {
+    if (!ta) return
+    const maxScroll = Math.max(0, ta.scrollHeight - ta.clientHeight)
+    if (ta.scrollTop > maxScroll) {
+      ta.scrollTop = maxScroll
+    }
+    if (gutter) {
       gutter.style.transform = `translate3d(0, -${ta.scrollTop}px, 0)`
     }
-  }, [])
+    const lh = parseFloat(getComputedStyle(ta).lineHeight)
+    const lineHeight = Number.isFinite(lh) && lh > 0 ? lh : 21.3125
+    const firstVisible = Math.min(lineCount, Math.floor(ta.scrollTop / lineHeight) + 1)
+    setScrollLine(firstVisible)
+  }, [lineCount])
 
   useLayoutEffect(() => {
+    const ta = textareaRef.current
+    if (ta && lineCount < prevLineCountRef.current) {
+      ta.scrollTop = 0
+    }
+    prevLineCountRef.current = lineCount
     syncGutterScroll()
-  }, [value, gutterText, syncGutterScroll])
+  }, [value, gutterText, lineCount, syncGutterScroll])
 
   const flash = (msg: string) => {
     setClipboardMsg(msg)
@@ -140,9 +156,23 @@ export function CodePanel({
     el.select()
   }
 
+  const scrollToTop = () => {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.scrollTop = 0
+    syncGutterScroll()
+    ta.focus()
+  }
+
   const handleClear = () => {
     onChange?.('')
-    textareaRef.current?.focus()
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current
+      if (!ta) return
+      ta.scrollTop = 0
+      ta.focus()
+      syncGutterScroll()
+    })
   }
 
   const stopWindowDrag = (e: React.PointerEvent | React.MouseEvent) => {
@@ -168,11 +198,36 @@ export function CodePanel({
           <Eraser className="w-3.5 h-3.5" />
           <span>{ui.clearSource}</span>
         </button>
-        {clipboardMsg && (
+        {clipboardMsg ? (
           <span className="ml-auto text-[10px] text-emerald-400 flex items-center gap-1 pr-1">
             <Check className="w-3 h-3" />
             {clipboardMsg}
           </span>
+        ) : null}
+        {lineNumbers && (
+          <span className="ml-auto flex items-center gap-2 text-[10px] text-slate-500 tabular-nums pr-1">
+            <span>
+              {lineCount.toLocaleString()} {ui.lineCount}
+              {lineCount > 1 ? ` · L${scrollLine}` : ''}
+            </span>
+            {lineCount > 30 && scrollLine > 8 && (
+              <button type="button" onClick={scrollToTop} className="editor-clip-btn py-0.5 px-1.5">
+                {ui.scrollToTop}
+              </button>
+            )}
+          </span>
+        )}
+      </div>
+    ) : lineNumbers ? (
+      <div className="flex justify-end items-center gap-2 px-2 py-1 border-b border-white/[0.06] bg-black/20 shrink-0">
+        <span className="text-[10px] text-slate-500 tabular-nums">
+          {lineCount.toLocaleString()} {ui.lineCount}
+          {lineCount > 1 ? ` · L${scrollLine}` : ''}
+        </span>
+        {editable && lineCount > 30 && scrollLine > 8 && (
+          <button type="button" onClick={scrollToTop} className="editor-clip-btn py-0.5 px-1.5">
+            {ui.scrollToTop}
+          </button>
         )}
       </div>
     ) : null
