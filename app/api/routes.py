@@ -3,7 +3,7 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app import repository
 from app.config import settings
@@ -90,7 +90,10 @@ def list_directions() -> DirectionsResponse:
 
 
 @router.post("/convert/async", response_model=ConvertAsyncResponse)
-async def convert_async(body: ConvertRequest) -> ConvertAsyncResponse:
+async def convert_async(
+    body: ConvertRequest,
+    background_tasks: BackgroundTasks,
+) -> ConvertAsyncResponse:
     """Start conversion in the background; poll GET /jobs/{job_id} for the result."""
     _check_source_size(body)
     try:
@@ -98,9 +101,10 @@ async def convert_async(body: ConvertRequest) -> ConvertAsyncResponse:
     except HTTPException:
         raise
     try:
-        job_id = await job_runner.start(body)
+        job_id = job_runner.enqueue(body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    background_tasks.add_task(job_runner.execute, job_id, body.save_history)
     return ConvertAsyncResponse(job_id=job_id, status="running")
 
 

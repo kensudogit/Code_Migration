@@ -10,12 +10,14 @@ import { ui } from '@/lib/ui'
 type Props = {
   jobs: JobSummary[]
   onRefresh: () => Promise<void>
+  onApplyResult?: (code: string) => void
 }
 
-export function HistoryPanel({ jobs, onRefresh }: Props) {
+export function HistoryPanel({ jobs, onRefresh, onApplyResult }: Props) {
   const [refreshing, setRefreshing] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
+  const [expandedStatus, setExpandedStatus] = useState<string | null>(null)
 
   const refresh = async () => {
     setRefreshing(true)
@@ -34,7 +36,13 @@ export function HistoryPanel({ jobs, onRefresh }: Props) {
     }
     setExpanded(id)
     const job = await getJob(id)
+    setExpandedStatus(job.status)
     setDetail(job.result_code ?? job.error_message ?? '(empty)')
+  }
+
+  const applyToEditor = () => {
+    if (!detail || !onApplyResult || expandedStatus !== 'completed') return
+    onApplyResult(detail)
   }
 
   return (
@@ -90,9 +98,20 @@ export function HistoryPanel({ jobs, onRefresh }: Props) {
                   </div>
                 </button>
                 {open && detail && (
-                  <pre className="mt-2 mx-1 mb-1 p-3 rounded-xl bg-black/40 border border-white/[0.04] text-[11px] text-slate-400 overflow-auto max-h-64 code-editor whitespace-pre-wrap leading-relaxed">
-                    {detail}
-                  </pre>
+                  <div className="mt-2 mx-1 mb-1 space-y-2">
+                    {expandedStatus === 'completed' && onApplyResult && detail !== '(empty)' && (
+                      <button
+                        type="button"
+                        onClick={applyToEditor}
+                        className="w-full text-xs font-medium py-2 rounded-lg border border-violet-500/30 text-violet-200 hover:bg-violet-500/15 transition-colors"
+                      >
+                        {ui.applyResult}
+                      </button>
+                    )}
+                    <pre className="p-3 rounded-xl bg-black/40 border border-white/[0.04] text-[11px] text-slate-400 overflow-auto max-h-64 code-editor whitespace-pre-wrap leading-relaxed">
+                      {detail}
+                    </pre>
+                  </div>
                 )}
               </li>
             )

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -17,13 +16,15 @@ from app.services.pairs import ConversionDirection, resolve_direction
 
 logger = logging.getLogger("code-migration.jobs")
 
-_MAX_MEMORY_JOBS = 40
+_MAX_MEMORY_JOBS = 60
+_TERMINAL = frozenset({"completed", "failed"})
 
 
 @dataclass
 class RuntimeJob:
     id: UUID
     direction: ConversionDirection
+    source_code: str
     status: str
     created_at: datetime
     model: str | None = None
@@ -57,13 +58,87 @@ def _resolve_direction(body: ConvertRequest) -> ConversionDirection:
 def _prune_memory() -> None:
     if len(_MEMORY) <= _MAX_MEMORY_JOBS:
         return
-    done = [j for j in _MEMORY.values() if j.status in ("completed", "failed")]
+    done = [j for j in _MEMORY.values() if j.status in _TERMINAL]
     done.sort(key=lambda j: j.created_at)
-    for job in done[: len(_MEMORY) - _MAX_MEMORY_JOBS + 5]:
+    for job in done[: max(0, len(_MEMORY) - _MAX_MEMORY_JOBS + 10)]:
         _MEMORY.pop(job.id, None)
 
 
-async def _run_job(
+def _mem_to_dict(mem: RuntimeJob, *, include_source: bool) -> dict:
+    return {
+        "id": mem.id,
+        "direction": mem.direction.value,
+        "source_language": mem.direction.source.value,
+        "target_language": mem.direction.target.value,
+        "status": mem.status,
+        "model": mem.model,
+        "created_at": mem.created_at,
+        "completed_at": mem.completed_at,
+        "result_code": mem.result_code,
+        "error_message": mem.error_message,
+        "warnings": mem.warnings or None,
+        "source_code": mem.source_code if include_source else "",
+        "prompt_tokens": mem.prompt_tokens,
+        "completion_tokens": mem.completion_tokens,
+        "openai_request_id": mem.request_id,
+        "progress": mem.progress,
+        "mock": mem.mock,
+        "notes": mem.notes,
+    }
+
+
+def _row_to_dict(row: dict, *, include_source: bool) -> dict:
+    data = dict(row)
+    if not include_source:
+        data["source_code"] = ""
+    data.setdefault("progress", None)
+    data.setdefault("mock", False)
+    data.setdefault("notes", None)
+    return data
+
+
+def enqueue(body: ConvertRequest) -> UUID:
+    """Register job in memory and return id immediately (no DB write yet)."""
+    direction = _resolve_direction(body)
+    model_name = settings.openai_model if settings.ai_enabled else "mock"
+    job_id = uuid4()
+    job = RuntimeJob(
+        id=job_id,
+        direction=direction,
+        source_code=body.source_code,
+        status="running",
+        created_at=datetime.now(timezone.utc),
+        model=model_name,
+        progress="Queued…",
+    )
+    _MEMORY[job_id] = job
+    _prune_memory()
+    return job_id
+
+
+async def execute(job_id: UUID, *, save_history: bool) -> None:
+    """Run DB persist (if any) and AI conversion. Invoked via FastAPI BackgroundTasks."""
+    job = _MEMORY.get(job_id)
+    if job is None:
+        logger.error("execute called for unknown job %s", job_id)
+        return
+
+    if save_history and settings.postgres_enabled:
+        job.progress = "Saving job to database…"
+        try:
+            repository.create_job_with_id(
+                job_id,
+                job.direction,
+                job.source_code,
+                model=job.model,
+            )
+        except Exception as exc:
+            logger.warning("create_job_with_id failed for %s: %s", job_id, exc)
+
+    await _run_conversion(job_id, job.direction, job.source_code, save_history=save_history)
+
+
+async def _run_conversion(
     job_id: UUID,
     direction: ConversionDirection,
     source_code: str,
@@ -125,68 +200,37 @@ async def _run_job(
 
 
 async def start(body: ConvertRequest) -> UUID:
-    """Enqueue conversion; returns immediately with job id."""
-    direction = _resolve_direction(body)
-    model_name = settings.openai_model if settings.ai_enabled else "mock"
-    job_id = uuid4()
-
-    if body.save_history and settings.postgres_enabled:
-        try:
-            job_id = repository.create_job(direction, body.source_code, model=model_name)
-        except Exception as exc:
-            logger.warning("create_job failed (using in-memory job only): %s", exc)
-
-    job = RuntimeJob(
-        id=job_id,
-        direction=direction,
-        status="running",
-        created_at=datetime.now(timezone.utc),
-        model=model_name,
-        progress="Queued…",
-    )
-    _MEMORY[job_id] = job
-    _prune_memory()
-
-    asyncio.create_task(
-        _run_job(job_id, direction, body.source_code, save_history=body.save_history)
-    )
-    return job_id
+    """Backward-compatible entry: enqueue only (caller must schedule execute)."""
+    return enqueue(body)
 
 
 def get_job(job_id: UUID, *, include_source: bool = False) -> dict | None:
-    """Job status for polling; omits large source_code by default."""
+    """Merged view: in-memory state wins when it has reached a terminal status."""
     mem = _MEMORY.get(job_id)
-    if mem is not None:
-        return {
-            "id": mem.id,
-            "direction": mem.direction.value,
-            "source_language": mem.direction.source.value,
-            "target_language": mem.direction.target.value,
-            "status": mem.status,
-            "model": mem.model,
-            "created_at": mem.created_at,
-            "completed_at": mem.completed_at,
-            "result_code": mem.result_code,
-            "error_message": mem.error_message,
-            "warnings": mem.warnings or None,
-            "source_code": "" if not include_source else None,
-            "prompt_tokens": mem.prompt_tokens,
-            "completion_tokens": mem.completion_tokens,
-            "openai_request_id": mem.request_id,
-            "progress": mem.progress,
-            "mock": mem.mock,
-            "notes": mem.notes,
-        }
+    row = repository.get_job(job_id) if settings.postgres_enabled else None
 
-    if settings.postgres_enabled:
-        row = repository.get_job(job_id)
-        if row is None:
-            return None
-        data = dict(row)
-        if not include_source:
-            data["source_code"] = ""
-        data.setdefault("progress", None)
-        data.setdefault("mock", False)
-        data.setdefault("notes", None)
+    if mem is None and row is None:
+        return None
+    if mem is None:
+        return _row_to_dict(row, include_source=include_source)
+    if row is None:
+        return _mem_to_dict(mem, include_source=include_source)
+
+    mem_terminal = mem.status in _TERMINAL
+    row_status = row.get("status")
+    row_terminal = row_status in _TERMINAL
+    row_has_result = bool((row.get("result_code") or "").strip())
+
+    if mem_terminal:
+        data = _mem_to_dict(mem, include_source=include_source)
+        if not (data.get("result_code") or "").strip() and row_has_result:
+            data["result_code"] = row["result_code"]
         return data
-    return None
+
+    if row_terminal and row_status == "failed":
+        return _row_to_dict(row, include_source=include_source)
+
+    if row_terminal and row_has_result:
+        return _row_to_dict(row, include_source=include_source)
+
+    return _mem_to_dict(mem, include_source=include_source)

@@ -7,6 +7,18 @@ from uuid import UUID
 from app.db import get_conn
 from app.services.pairs import ConversionDirection
 
+# Avoid multi-megabyte rows slowing inserts; full source stays in memory during conversion.
+_DB_TEXT_SOFT_LIMIT = 400_000
+
+
+def _clip_for_db(text: str, *, label: str) -> str:
+    if len(text) <= _DB_TEXT_SOFT_LIMIT:
+        return text
+    return (
+        text[:_DB_TEXT_SOFT_LIMIT]
+        + f"\n\n/* --- {label} truncated for database storage ({len(text):,} chars total) --- */\n"
+    )
+
 
 def create_job(
     direction: ConversionDirection,
@@ -14,22 +26,56 @@ def create_job(
     *,
     model: str | None = None,
 ) -> UUID:
+    return create_job_with_id(
+        None,
+        direction,
+        source_code,
+        model=model,
+    )
+
+
+def create_job_with_id(
+    job_id: UUID | None,
+    direction: ConversionDirection,
+    source_code: str,
+    *,
+    model: str | None = None,
+) -> UUID:
+    stored_source = _clip_for_db(source_code, label="source")
     with get_conn() as conn:
-        row = conn.execute(
-            """
-            INSERT INTO conversion_jobs
-                (source_language, target_language, direction, source_code, status, model)
-            VALUES (%s, %s, %s, %s, 'running', %s)
-            RETURNING id
-            """,
-            (
-                direction.source.value,
-                direction.target.value,
-                direction.value,
-                source_code,
-                model,
-            ),
-        ).fetchone()
+        if job_id is None:
+            row = conn.execute(
+                """
+                INSERT INTO conversion_jobs
+                    (source_language, target_language, direction, source_code, status, model)
+                VALUES (%s, %s, %s, %s, 'running', %s)
+                RETURNING id
+                """,
+                (
+                    direction.source.value,
+                    direction.target.value,
+                    direction.value,
+                    stored_source,
+                    model,
+                ),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                INSERT INTO conversion_jobs
+                    (id, source_language, target_language, direction, source_code, status, model)
+                VALUES (%s, %s, %s, %s, %s, 'running', %s)
+                RETURNING id
+                """,
+                (
+                    job_id,
+                    direction.source.value,
+                    direction.target.value,
+                    direction.value,
+                    stored_source,
+                    model,
+                ),
+            ).fetchone()
         conn.commit()
         return row["id"]
 
@@ -43,6 +89,7 @@ def complete_job(
     openai_request_id: str | None = None,
     warnings: list[str] | None = None,
 ) -> None:
+    stored_result = _clip_for_db(result_code, label="result")
     with get_conn() as conn:
         conn.execute(
             """
@@ -57,7 +104,7 @@ def complete_job(
             WHERE id = %s
             """,
             (
-                result_code,
+                stored_result,
                 datetime.now(timezone.utc),
                 prompt_tokens,
                 completion_tokens,
@@ -80,7 +127,7 @@ def fail_job(job_id: UUID, error: str, *, openai_request_id: str | None = None) 
                 openai_request_id = COALESCE(%s, openai_request_id)
             WHERE id = %s
             """,
-            (error, datetime.now(timezone.utc), openai_request_id, job_id),
+            (error[:8000], datetime.now(timezone.utc), openai_request_id, job_id),
         )
         conn.commit()
 

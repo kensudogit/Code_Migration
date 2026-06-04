@@ -37,6 +37,7 @@ export function MigrationStudio() {
     null,
   )
   const [progress, setProgress] = useState<string | null>(null)
+  const [autoDirectionNote, setAutoDirectionNote] = useState<string | null>(null)
 
   const refreshMeta = useCallback(async () => {
     const [h, dirs, j] = await Promise.all([getHealth(), getDirections(), listJobs(12)])
@@ -57,6 +58,10 @@ export function MigrationStudio() {
     setMeta(null)
   }
 
+  const looksLikePython =
+    direction === 'java_to_python' &&
+    /^\s*(#|"""|'''|from |import |def |async def |class )/m.test(source.slice(0, 800))
+
   const onConvert = async () => {
     if (!source.trim()) {
       setError(ui.emptySource)
@@ -65,8 +70,14 @@ export function MigrationStudio() {
     setLoading(true)
     setError(null)
     setProgress(null)
+    setAutoDirectionNote(null)
+    const effectiveDirection: DirectionId =
+      looksLikePython && direction === 'java_to_python' ? 'python_to_java' : direction
+    if (effectiveDirection !== direction) {
+      setAutoDirectionNote(ui.autoDirectionNote)
+    }
     try {
-      const res = await convertCode(direction, source, setProgress)
+      const res = await convertCode(effectiveDirection, source, setProgress)
       setResult(res.result_code)
       setMockMode(res.mock)
       setMeta({
@@ -84,9 +95,10 @@ export function MigrationStudio() {
     }
   }
 
-  const looksLikePython =
-    direction === 'java_to_python' &&
-    /^\s*(#|"""|'''|from |import |def |async def |class )/m.test(source.slice(0, 800))
+  const onApplyHistoryResult = (code: string) => {
+    setResult(code)
+    setError(null)
+  }
 
   const onCopy = async () => {
     if (!result) return
@@ -180,8 +192,12 @@ export function MigrationStudio() {
               )}
             </div>
 
-            {looksLikePython && !loading && (
+            {looksLikePython && !loading && !autoDirectionNote && (
               <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintPython}</p>
+            )}
+
+            {autoDirectionNote && !loading && (
+              <p className="text-xs text-cyan-300/90 m-0 px-1">{autoDirectionNote}</p>
             )}
 
             {loading && progress && (
@@ -247,7 +263,7 @@ export function MigrationStudio() {
           </div>
 
           <aside className="fade-up fade-up-delay-2 xl:sticky xl:top-[5.5rem] xl:self-start">
-            <HistoryPanel jobs={jobs} onRefresh={refreshMeta} />
+            <HistoryPanel jobs={jobs} onRefresh={refreshMeta} onApplyResult={onApplyHistoryResult} />
           </aside>
         </div>
       </main>

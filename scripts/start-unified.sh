@@ -39,7 +39,7 @@ if [ -z "${OPENAI_API_KEY:-}" ]; then
 fi
 
 echo "[unified] starting FastAPI (background)..."
-python -m uvicorn app.main:app --host 0.0.0.0 --port "${API_PORT}" &
+python -m uvicorn app.main:app --host 0.0.0.0 --port "${API_PORT}" --workers 1 &
 API_PID=$!
 
 # Wait for API in background only — Railway /health hits Next on $PORT, not this port.
