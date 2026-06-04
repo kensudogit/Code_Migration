@@ -1,8 +1,8 @@
 'use client'
 
-import { ArrowRight, Radio, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, Radio, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { displayDirectionLabel, formatDirectionLabel } from '@/lib/directionFormat'
+import { formatDirectionLabel } from '@/lib/directionFormat'
 import type { DirectionId, DirectionInfo, Language } from '@/lib/types'
 import { LANG_META } from '@/lib/types'
 import { ui } from '@/lib/ui'
@@ -44,11 +44,16 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
 
   useEffect(() => {
     if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   return (
@@ -56,31 +61,32 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full text-left rounded-2xl p-4 border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-violet-600/5 hover:from-indigo-500/15 hover:border-indigo-500/50 transition-all group"
+        className="w-full text-left rounded-2xl p-5 border-2 border-indigo-500/40 bg-slate-900 hover:bg-slate-800/95 hover:border-indigo-400/60 transition-all group shadow-inner shadow-black/20"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center shrink-0 group-hover:border-indigo-500/40 transition-colors">
-              <Radio className="w-5 h-5 text-indigo-400" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/50">
+              <Radio className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">{ui.remoteTapToOpen}</div>
+              <div className="text-xs font-semibold text-slate-400 mb-1.5">{ui.remoteTapToOpen}</div>
               {current && (
-                <DirectionPairRow source={current.source} target={current.target} size="md" />
+                <DirectionLabel source={current.source} target={current.target} size="lg" />
               )}
             </div>
           </div>
-          <span className="text-xs font-medium text-indigo-300 shrink-0 px-2 py-1 rounded-lg bg-indigo-500/15">
+          <span className="inline-flex items-center gap-1 text-sm font-bold text-white shrink-0 px-3 py-2 rounded-xl bg-indigo-600 group-hover:bg-indigo-500">
             {ui.remoteOpen}
+            <ChevronRight className="w-4 h-4" />
           </span>
         </div>
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[180] flex items-center justify-center p-4 sm:p-6 bg-slate-950/85"
           role="presentation"
           onClick={() => setOpen(false)}
         >
@@ -88,31 +94,31 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
             role="dialog"
             aria-modal="true"
             aria-label={ui.remoteTitle}
-            className="remote-shell w-full max-w-md rounded-[2rem] border border-slate-600/80 bg-gradient-to-b from-slate-800 to-slate-950 shadow-2xl shadow-black/60 p-5 sm:p-6"
+            className="remote-shell remote-panel w-full max-w-xl rounded-3xl border-2 border-slate-600 p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500/80" />
-                <span className="w-2 h-2 rounded-full bg-amber-400/80" />
-                <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 text-xs font-bold tracking-widest text-slate-400 uppercase">
-                  {ui.remoteTitle}
-                </span>
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                </div>
+                <h2 className="text-lg font-bold text-white m-0 tracking-tight">{ui.remoteTitle}</h2>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2.5 rounded-xl text-slate-300 bg-slate-800 border border-slate-600 hover:text-white hover:bg-slate-700 transition-colors"
                 aria-label={ui.remoteClose}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 text-center mb-4 m-0">{ui.remoteHint}</p>
+            <p className="text-sm text-slate-300 text-center mb-6 m-0 leading-relaxed px-2">{ui.remoteHint}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map((d) => {
                 const active = d.id === selected
                 return (
@@ -120,25 +126,24 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
                     key={d.id}
                     type="button"
                     onClick={() => pick(d.id)}
-                    className={`remote-key text-left rounded-2xl px-3 py-3.5 border transition-all duration-200 ${
+                    className={`remote-key relative text-left rounded-2xl px-4 py-4 min-h-[4.5rem] border-2 transition-all duration-200 ${
                       active
-                        ? 'border-indigo-400/70 bg-indigo-500/20 shadow-lg shadow-indigo-500/20 ring-1 ring-indigo-400/40'
-                        : 'border-slate-600/60 bg-slate-900/80 hover:bg-slate-800 hover:border-slate-500'
+                        ? 'border-indigo-400 bg-indigo-600/30 shadow-lg shadow-indigo-900/40'
+                        : 'border-slate-600 bg-slate-800 hover:bg-slate-700 hover:border-slate-500'
                     }`}
                   >
-                    <DirectionPairRow source={d.source} target={d.target} size="sm" />
-                    <div className={`text-[11px] mt-2 font-medium ${active ? 'text-indigo-200' : 'text-slate-500'}`}>
-                      {displayDirectionLabel(d)}
-                    </div>
+                    {active && (
+                      <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-indigo-400" />
+                    )}
+                    <DirectionLabel
+                      source={d.source}
+                      target={d.target}
+                      size="md"
+                      bright={active}
+                    />
                   </button>
                 )
               })}
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-center">
-              <div className="w-14 h-14 rounded-full border-4 border-slate-700 bg-slate-900 flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30" />
-              </div>
             </div>
           </div>
         </div>
@@ -147,34 +152,28 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
   )
 }
 
-function DirectionPairRow({
+function DirectionLabel({
   source,
   target,
   size,
+  bright = false,
 }: {
   source: Language
   target: Language
-  size: 'sm' | 'md'
+  size: 'md' | 'lg'
+  bright?: boolean
 }) {
   const src = LANG_META[source]
   const tgt = LANG_META[target]
-  const text = size === 'md' ? 'text-sm' : 'text-xs'
-  return (
-    <div className={`flex items-center gap-1.5 flex-wrap ${text} font-semibold`}>
-      <LangChip meta={src} />
-      <ArrowRight className="w-3.5 h-3.5 text-indigo-400 shrink-0" aria-hidden />
-      <LangChip meta={tgt} />
-    </div>
-  )
-}
+  const text = size === 'lg' ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'
+  const arrow = size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
+  const muted = bright ? 'text-white' : 'text-slate-100'
 
-function LangChip({ meta }: { meta: (typeof LANG_META)[keyof typeof LANG_META] }) {
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide"
-      style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
-    >
-      {meta.icon} {meta.label}
-    </span>
+    <div className={`flex items-center gap-2 flex-wrap font-bold ${text} ${muted}`}>
+      <span style={{ color: src.color }}>{src.label}</span>
+      <ArrowRight className={`${arrow} text-indigo-300 shrink-0`} aria-hidden />
+      <span style={{ color: tgt.color }}>{tgt.label}</span>
+    </div>
   )
 }

@@ -99,7 +99,7 @@ export function MigrationStudio() {
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="space-y-6 fade-up">
-          <section className="glass rounded-2xl p-5">
+          <section className="glass rounded-2xl p-5 relative">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4 text-indigo-400" />
               <h2 className="text-sm font-semibold text-slate-200 m-0">{ui.selectDirection}</h2>
