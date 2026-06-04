@@ -109,6 +109,19 @@ export async function convertCode(
   sourceCode: string,
   onProgress?: (message: string | null) => void,
 ): Promise<ConvertResponse> {
+  onProgress?.('バックエンド接続を確認しています…')
+  let health: HealthResponse | null = null
+  for (let h = 0; h < 5; h++) {
+    health = await getHealth().catch(() => null)
+    if (health?.ok) break
+    await sleep(1000)
+  }
+  if (!health?.ok) {
+    throw new Error(
+      'バックエンド API に接続できません。数十秒待ってから再試行するか、Railway のデプロイログを確認してください。',
+    )
+  }
+
   onProgress?.('ジョブを開始しています…')
 
   const started = await fetchJson<{ job_id: string; status: string }>('/convert/async', {

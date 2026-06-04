@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app import repository
 from app.api.routes import router
 from app.config import settings
 from app.db import close_pool, init_pool, ping
@@ -21,6 +22,9 @@ async def lifespan(_app: FastAPI):
         try:
             init_pool()
             apply_migrations()
+            stale = repository.fail_stale_running_jobs()
+            if stale:
+                logger.info("Marked %s stale running job(s) as failed", stale)
             logger.info("PostgreSQL ready")
         except Exception as exc:
             logger.warning("PostgreSQL unavailable at startup (continuing without history): %s", exc)

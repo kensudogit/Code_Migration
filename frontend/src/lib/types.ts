@@ -63,6 +63,7 @@ export type JobDetail = JobSummary & {
   progress?: string | null
   mock?: boolean
   notes?: string | null
+  openai_request_id?: string | null
 }
 
 export const LANG_META: Record<Language, { label: string; color: string; icon: string }> = {

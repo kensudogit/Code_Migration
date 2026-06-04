@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app.config import settings
 from app.db import get_conn
 from app.services.pairs import ConversionDirection
 
@@ -130,6 +131,25 @@ def fail_job(job_id: UUID, error: str, *, openai_request_id: str | None = None) 
             (error[:8000], datetime.now(timezone.utc), openai_request_id, job_id),
         )
         conn.commit()
+
+
+def fail_stale_running_jobs(message: str = "Server restarted during conversion") -> int:
+    """Mark orphaned running jobs failed after API restart."""
+    if not settings.postgres_enabled:
+        return 0
+    with get_conn() as conn:
+        cur = conn.execute(
+            """
+            UPDATE conversion_jobs
+            SET status = 'failed',
+                error_message = %s,
+                completed_at = %s
+            WHERE status = 'running'
+            """,
+            (message, datetime.now(timezone.utc)),
+        )
+        conn.commit()
+        return cur.rowcount
 
 
 def list_jobs(limit: int = 50) -> list[dict]:
