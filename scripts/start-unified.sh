@@ -38,35 +38,37 @@ if [ -z "${OPENAI_API_KEY:-}" ]; then
   echo "[unified]   Railway -> this service -> Variables -> OPENAI_API_KEY -> Redeploy"
 fi
 
+wait_for_api() {
+  curl -sf "http://127.0.0.1:${API_PORT}/health" >/dev/null 2>&1
+}
+
 start_api() {
   python -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}" --workers 1 --timeout-keep-alive 75 &
   echo $!
 }
 
-echo "[unified] starting FastAPI..."
+echo "[unified] starting FastAPI in background..."
 API_PID="$(start_api)"
 
-wait_for_api() {
-  curl -sf "http://127.0.0.1:${API_PORT}/health" >/dev/null 2>&1
-}
-
-i=0
-while [ "$i" -lt 90 ]; do
-  if wait_for_api; then
-    echo "[unified] API ready on 127.0.0.1:${API_PORT} (pid ${API_PID})"
-    break
+# Warm API without blocking web bind (Railway healthcheck uses /health/live)
+(
+  i=0
+  while [ "$i" -lt 120 ]; do
+    if wait_for_api; then
+      echo "[unified] API ready on 127.0.0.1:${API_PORT} (pid ${API_PID})"
+      break
+    fi
+    if ! kill -0 "${API_PID}" 2>/dev/null; then
+      echo "[unified] FastAPI exited during startup — restarting (attempt $i)"
+      API_PID="$(start_api)"
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  if ! wait_for_api; then
+    echo "[unified] WARNING: API not healthy after 120s (web still serves /health/live)"
   fi
-  if ! kill -0 "${API_PID}" 2>/dev/null; then
-    echo "[unified] FastAPI exited during startup — restarting (attempt $i)"
-    API_PID="$(start_api)"
-  fi
-  i=$((i + 1))
-  sleep 1
-done
-
-if ! wait_for_api; then
-  echo "[unified] ERROR: API not healthy after 90s — starting web anyway (proxy will return 502)"
-fi
+) &
 
 # Keep API alive while Next.js runs (OOM/crash recovery)
 (
@@ -90,8 +92,8 @@ fi
   done
 ) &
 
-echo "[unified] starting Next.js on 0.0.0.0:${WEB_PORT} (healthcheck -> /health includes API)"
+echo "[unified] starting Next.js on 0.0.0.0:${WEB_PORT} (Railway healthcheck -> /health/live)"
 cd /app/frontend
 export PORT="${WEB_PORT}"
 export HOSTNAME=0.0.0.0
-exec npx next start --hostname 0.0.0.0 --port "${WEB_PORT}"
+exec node ./node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port "${WEB_PORT}"

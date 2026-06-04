@@ -1,6 +1,7 @@
 """Code Migration API - AI code conversion (Java / Python / TypeScript / COBOL)."""
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,19 +17,26 @@ from app.migrate import apply_migrations
 logger = logging.getLogger("code-migration")
 
 
+def _init_postgres_background() -> None:
+    if not settings.postgres_enabled:
+        return
+    try:
+        init_pool()
+        apply_migrations()
+        stale = repository.fail_stale_running_jobs()
+        if stale:
+            logger.info("Marked %s stale running job(s) as failed", stale)
+        logger.info("PostgreSQL ready")
+    except Exception as exc:
+        logger.warning("PostgreSQL unavailable at startup (continuing without history): %s", exc)
+        close_pool()
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     if settings.postgres_enabled:
-        try:
-            init_pool()
-            apply_migrations()
-            stale = repository.fail_stale_running_jobs()
-            if stale:
-                logger.info("Marked %s stale running job(s) as failed", stale)
-            logger.info("PostgreSQL ready")
-        except Exception as exc:
-            logger.warning("PostgreSQL unavailable at startup (continuing without history): %s", exc)
-            close_pool()
+        threading.Thread(target=_init_postgres_background, name="postgres-init", daemon=True).start()
+        logger.info("PostgreSQL init started in background")
     else:
         logger.info("PostgreSQL disabled (DATABASE_URL not configured)")
     yield

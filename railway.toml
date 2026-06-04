@@ -14,7 +14,7 @@ dockerfilePath = "Dockerfile.unified"
 watchPatterns = ["app/**", "frontend/**", "migrations/**", "scripts/**", "Dockerfile.unified"]
 
 [deploy]
-healthcheckPath = "/health"
+healthcheckPath = "/health/live"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 numReplicas = 1

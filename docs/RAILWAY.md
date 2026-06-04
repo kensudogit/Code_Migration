@@ -32,7 +32,8 @@
 
 | URL | ?? |
 |-----|------|
-| `/health` | Next.js ???? |
+| `/health/live` | Railway deploy probe (web only) |
+| `/health` | Web + API status (diagnostics) |
 | `/api/v1/health` | Postgres / AI ???? |
 | `/api/v1/setup` | ??????????`openai_api_key: set` ??? |
 

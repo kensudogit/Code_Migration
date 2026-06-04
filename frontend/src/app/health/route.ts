@@ -1,4 +1,4 @@
-/** Railway healthcheck: web + internal FastAPI must both respond. */
+/** Full status: web always up; API may still be warming (use /health/live for deploy probes). */
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const res = await fetch(`${API_BASE}/health`, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
       cache: 'no-store',
     })
     apiOk = res.ok
@@ -21,17 +21,17 @@ export async function GET() {
     apiError = err instanceof Error ? err.message : 'fetch failed'
   }
 
-  const ok = apiOk
   return Response.json(
     {
-      ok,
+      ok: apiOk,
       service: 'code-migration-unified',
       web: true,
       api: apiOk,
       api_url: API_BASE,
       api_error: apiError,
       unified: process.env.UNIFIED_DEPLOY === '1',
+      live_probe: '/health/live',
     },
-    { status: ok ? 200 : 503 },
+    { status: 200 },
   )
 }
