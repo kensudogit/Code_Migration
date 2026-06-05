@@ -1,6 +1,7 @@
 'use client'
 
 import { ArrowRightLeft, AlertTriangle } from 'lucide-react'
+import { AppLogo } from '@/components/AppLogo'
 import { useCallback, useEffect, useState } from 'react'
 import { convertCode, getDirections, getHealth, listJobs } from '@/lib/api'
 import type { ConvertResponse, DirectionId, DirectionInfo, HealthResponse, JobSummary } from '@/lib/types'
@@ -144,12 +145,7 @@ export function MigrationStudio() {
         <div className="max-w-[1680px] mx-auto px-4 sm:px-8 py-4 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-violet-500/30 blur-xl" aria-hidden />
-                <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-violet-500 via-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <ArrowRightLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.25} />
-                </div>
-              </div>
+              <AppLogo />
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight m-0 text-gradient">
                   Code Migration

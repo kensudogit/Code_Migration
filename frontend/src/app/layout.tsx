@@ -18,6 +18,10 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Code Migration | AI Code Converter',
   description: ui.metaDesc,
+  icons: {
+    icon: '/PC.png',
+    apple: '/PC.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

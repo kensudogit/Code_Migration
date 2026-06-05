@@ -231,6 +231,131 @@ body::before {
   animation-delay: 0.12s;
 }
 
+/* Circular animated app logo */
+.app-logo {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-logo__ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #8b5cf6, #22d3ee, #6366f1, #a78bfa, #8b5cf6);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: app-logo-ring-spin 6s linear infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.app-logo__glow {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(139, 92, 246, 0.55) 0%,
+    rgba(34, 211, 238, 0.2) 42%,
+    transparent 72%
+  );
+  animation: app-logo-glow-pulse 3s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.app-logo__scan {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.35;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.45) 48%,
+    transparent 58%
+  );
+  background-size: 220% 100%;
+  animation: app-logo-scan 4s ease-in-out infinite;
+}
+
+.app-logo__image {
+  position: relative;
+  z-index: 1;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  animation: app-logo-float 4s ease-in-out infinite;
+}
+
+@keyframes app-logo-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes app-logo-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes app-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes app-logo-scan {
+  0%,
+  100% {
+    background-position: 180% 0;
+  }
+  50% {
+    background-position: -80% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-logo__ring,
+  .app-logo__glow,
+  .app-logo__scan,
+  .app-logo__image {
+    animation: none;
+  }
+
+  .app-logo__scan {
+    opacity: 0;
+  }
+}
+
 /* Direction remote (draggable modal) */
 .direction-remote-floating button:focus-visible {
   outline: 2px solid rgba(139, 92, 246, 0.55);
