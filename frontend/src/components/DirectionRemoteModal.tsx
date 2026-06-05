@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronUp, GripVertical, Radio, Sparkles, X } from 'lucide-react'
+import { Bot, Check, ChevronUp, Copy, GripVertical, Loader2, Radio, Sparkles, X, Zap } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { displayDirectionLabel, formatDirectionLabel } from '@/lib/directionFormat'
 import { clampFloatingPosition } from '@/lib/floatingPosition'
@@ -41,6 +41,14 @@ type Props = {
   /** When set, parent can reopen the panel (e.g. header button). */
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  loading?: boolean
+  canCopy?: boolean
+  copied?: boolean
+  mockMode?: boolean
+  progress?: string | null
+  sourceLarge?: boolean
+  onConvert?: () => void
+  onCopy?: () => void
 }
 
 /** Draggable floating modal for conversion direction (6-card grid). */
@@ -50,6 +58,14 @@ export function DirectionRemoteModal({
   onSelect,
   open: openControlled,
   onOpenChange,
+  loading = false,
+  canCopy = false,
+  copied = false,
+  mockMode = false,
+  progress = null,
+  sourceLarge = false,
+  onConvert,
+  onCopy,
 }: Props) {
   const items = directions.length > 0 ? directions : FALLBACK_DIRECTIONS
   const current = items.find((d) => d.id === selected) ?? items[0]
@@ -148,22 +164,35 @@ export function DirectionRemoteModal({
 
   if (!isOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="direction-remote-floating fixed z-[200] bottom-6 left-6 flex items-center gap-2.5 rounded-full border border-violet-500/40 bg-violet-600/95 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-violet-500 hover:border-violet-400/60 transition-colors"
-        aria-label={ui.remoteReopenFab}
-        title={ui.remoteReopenFab}
-      >
-        <Radio className="h-4 w-4 text-white shrink-0" strokeWidth={2.5} />
-        <span className="text-sm font-bold text-white">{ui.remoteOpen}</span>
-        {current && (
-          <span className="hidden sm:inline text-xs font-semibold text-violet-200/90 border-l border-white/20 pl-2.5">
-            <DirectionColored source={current.source} target={current.target} />
-          </span>
-        )}
-        <ChevronUp className="h-4 w-4 text-white/80 shrink-0" aria-hidden />
-      </button>
+      <div className="direction-remote-floating fixed z-[200] bottom-6 left-6 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2.5 rounded-full border border-violet-500/40 bg-violet-600/95 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-violet-500 hover:border-violet-400/60 transition-colors"
+          aria-label={ui.remoteReopenFab}
+          title={ui.remoteReopenFab}
+        >
+          <Radio className="h-4 w-4 text-white shrink-0" strokeWidth={2.5} />
+          <span className="text-sm font-bold text-white">{ui.remoteOpen}</span>
+          {current && (
+            <span className="hidden sm:inline text-xs font-semibold text-violet-200/90 border-l border-white/20 pl-2.5">
+              <DirectionColored source={current.source} target={current.target} />
+            </span>
+          )}
+          <ChevronUp className="h-4 w-4 text-white/80 shrink-0" aria-hidden />
+        </button>
+        <RemoteActions
+          compact
+          loading={loading}
+          canCopy={canCopy}
+          copied={copied}
+          mockMode={mockMode}
+          progress={progress}
+          sourceLarge={sourceLarge}
+          onConvert={onConvert}
+          onCopy={onCopy}
+        />
+      </div>
     )
   }
 
@@ -204,7 +233,7 @@ export function DirectionRemoteModal({
 
       <div className="px-3 py-2.5 bg-[#1a1d2e]">
         <p className="m-0 mb-2 text-[10px] leading-snug text-slate-500">{ui.remoteHint}</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 max-h-[min(42vh,320px)] overflow-y-auto pr-0.5">
           {items.map((d) => (
             <DirectionCard
               key={d.id}
@@ -214,7 +243,105 @@ export function DirectionRemoteModal({
             />
           ))}
         </div>
+        <RemoteActions
+          loading={loading}
+          canCopy={canCopy}
+          copied={copied}
+          mockMode={mockMode}
+          progress={progress}
+          sourceLarge={sourceLarge}
+          onConvert={onConvert}
+          onCopy={onCopy}
+        />
       </div>
+    </div>
+  )
+}
+
+function RemoteActions({
+  compact = false,
+  loading,
+  canCopy,
+  copied,
+  mockMode,
+  progress,
+  sourceLarge,
+  onConvert,
+  onCopy,
+}: {
+  compact?: boolean
+  loading: boolean
+  canCopy: boolean
+  copied: boolean
+  mockMode: boolean
+  progress: string | null
+  sourceLarge: boolean
+  onConvert?: () => void
+  onCopy?: () => void
+}) {
+  const convertLabel = loading
+    ? sourceLarge
+      ? ui.convertingLarge
+      : ui.converting
+    : ui.convert
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onConvert}
+          disabled={loading || !onConvert}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/90 px-3 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-violet-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title={convertLabel}
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+          <span className="hidden md:inline">{loading ? ui.converting : ui.convert}</span>
+        </button>
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={!canCopy || !onCopy}
+          className="inline-flex items-center justify-center gap-1 rounded-full border border-white/15 bg-[#1a1d2e]/95 px-3 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/[0.08] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title={copied ? ui.copied : ui.copy}
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={onConvert}
+          disabled={loading || !onConvert}
+          className="btn-primary w-full justify-center text-sm py-2.5"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+          {convertLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={!canCopy || !onCopy}
+          className="btn-secondary w-full justify-center text-sm py-2"
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          {copied ? ui.copied : ui.copy}
+        </button>
+      </div>
+      {loading && progress && (
+        <p className="text-[10px] text-slate-400 m-0 animate-pulse leading-snug">{progress}</p>
+      )}
+      {mockMode && (
+        <p className="text-[10px] text-amber-300/90 m-0 flex items-center gap-1.5">
+          <Bot className="w-3 h-3 shrink-0" />
+          {ui.mockHint}
+        </p>
+      )}
     </div>
   )
 }

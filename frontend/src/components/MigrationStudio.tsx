@@ -1,15 +1,6 @@
 'use client'
 
-import {
-  ArrowRightLeft,
-  Bot,
-  Check,
-  Copy,
-  Database,
-  Loader2,
-  Zap,
-  AlertTriangle,
-} from 'lucide-react'
+import { ArrowRightLeft, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { convertCode, getDirections, getHealth, listJobs } from '@/lib/api'
 import type { ConvertResponse, DirectionId, DirectionInfo, HealthResponse, JobSummary } from '@/lib/types'
@@ -184,19 +175,14 @@ export function MigrationStudio() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 py-3 sm:py-4">
         <div
-          className={`grid grid-cols-1 gap-6 lg:gap-8 ${
+          className={`grid grid-cols-1 gap-4 lg:gap-6 ${
             historyOpen ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : 'xl:grid-cols-1'
           }`}
         >
-          <div className="space-y-6 lg:space-y-8">
-            <section className="fade-up fade-up-delay-1 mt-4">
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <p className="section-label m-0">Step 2</p>
-                <span className="text-slate-600">·</span>
-                <span className="text-sm text-slate-500">Edit & convert</span>
-              </div>
+          <div className="space-y-3 sm:space-y-4">
+            <section className="fade-up fade-up-delay-1">
               <EditorWorkspace
                 sourceLang={srcLang}
                 targetLang={tgtLang}
@@ -206,27 +192,6 @@ export function MigrationStudio() {
                 resultPlaceholder={ui.resultPlaceholder}
               />
             </section>
-
-            <div className="flex flex-wrap items-center gap-3 fade-up fade-up-delay-2">
-              <button type="button" onClick={onConvert} disabled={loading} className="btn-primary">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                {loading
-                  ? source.length > 50_000
-                    ? ui.convertingLarge
-                    : ui.converting
-                  : ui.convert}
-              </button>
-              <button type="button" onClick={onCopy} disabled={!result} className="btn-secondary">
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                {copied ? ui.copied : ui.copy}
-              </button>
-              {mockMode && result && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300/90 px-3 py-2 rounded-full bg-amber-500/10 border border-amber-500/20">
-                  <Bot className="w-3.5 h-3.5" />
-                  {ui.mockHint}
-                </span>
-              )}
-            </div>
 
             {looksLikePython && !loading && !autoDirectionNote && (
               <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintPython}</p>
@@ -244,10 +209,6 @@ export function MigrationStudio() {
               <p className="text-xs text-cyan-300/90 m-0 px-1">{autoDirectionNote}</p>
             )}
 
-            {loading && progress && (
-              <p className="text-xs text-slate-400 m-0 px-1 animate-pulse">{progress}</p>
-            )}
-
             {error && (
               <div
                 role="alert"
@@ -258,8 +219,8 @@ export function MigrationStudio() {
               </div>
             )}
 
-            {meta && (meta.warnings.length > 0 || meta.notes || meta.usage || meta.request_id) && (
-              <section className="surface rounded-2xl p-5 space-y-4 text-sm">
+            {meta && (meta.warnings.length > 0 || meta.notes || meta.usage) && (
+              <section className="surface rounded-2xl p-4 space-y-3 text-sm">
                 {meta.warnings.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 text-amber-300 font-medium mb-2">
@@ -279,31 +240,16 @@ export function MigrationStudio() {
                 {meta.notes && (
                   <p className="text-slate-400 m-0 whitespace-pre-wrap leading-relaxed">{meta.notes}</p>
                 )}
-                <div className="flex flex-wrap gap-3 text-xs font-mono text-slate-500 pt-1 border-t border-white/5">
-                  {meta.usage && (
+                {meta.usage && (
+                  <div className="text-xs font-mono text-slate-500 pt-1 border-t border-white/5">
                     <span className="px-2 py-1 rounded-md bg-white/[0.03]">
                       {ui.tokenUsage}: {meta.usage.prompt_tokens ?? 0} / {meta.usage.completion_tokens ?? 0}
                       {meta.usage.total_tokens != null ? ` (${meta.usage.total_tokens})` : ''}
                     </span>
-                  )}
-                  {meta.request_id && (
-                    <span className="px-2 py-1 rounded-md bg-white/[0.03] truncate max-w-full">
-                      {ui.requestId}: {meta.request_id}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </section>
             )}
-
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <FeatureCard icon={<Bot className="w-5 h-5" />} title={ui.featureAi} desc={ui.featureAiDesc} />
-              <FeatureCard icon={<Database className="w-5 h-5" />} title={ui.featureDb} desc={ui.featureDbDesc} />
-              <FeatureCard
-                icon={<ArrowRightLeft className="w-5 h-5" />}
-                title={ui.featureDirs}
-                desc={ui.featureDirsDesc}
-              />
-            </section>
           </div>
 
           <aside
@@ -321,38 +267,22 @@ export function MigrationStudio() {
         </div>
       </main>
 
-      <footer className="border-t border-white/[0.04] py-6 text-center">
-        <p className="text-xs text-slate-600 m-0 tracking-wide">{ui.footer}</p>
-      </footer>
-
       <DirectionRemoteModal
         directions={directions}
         selected={direction}
         onSelect={onDirectionChange}
         open={directionRemoteOpen}
         onOpenChange={setDirectionRemoteOpen}
+        loading={loading}
+        canCopy={!!result}
+        copied={copied}
+        mockMode={mockMode && !!result}
+        progress={progress}
+        sourceLarge={source.length > 50_000}
+        onConvert={onConvert}
+        onCopy={onCopy}
       />
       <FloatingGuidePanel />
-    </div>
-  )
-}
-
-function FeatureCard({
-  icon,
-  title,
-  desc,
-}: {
-  icon: React.ReactNode
-  title: string
-  desc: string
-}) {
-  return (
-    <div className="group rounded-2xl border border-white/[0.05] bg-white/[0.02] p-4 sm:p-5 transition-colors hover:bg-white/[0.04] hover:border-white/[0.08]">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/10 flex items-center justify-center text-violet-300 mb-3 group-hover:text-violet-200 transition-colors">
-        {icon}
-      </div>
-      <div className="text-sm font-semibold text-slate-200">{title}</div>
-      <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{desc}</div>
     </div>
   )
 }

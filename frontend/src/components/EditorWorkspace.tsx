@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutGrid, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   clampRectToContainer,
@@ -35,9 +35,10 @@ export function EditorWorkspace({
   resultPlaceholder,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [containerSize, setContainerSize] = useState({ w: 900, h: 480 })
+  const [containerSize, setContainerSize] = useState({ w: 900, h: 520 })
   const [windows, setWindows] = useState<EditorWindowsState | null>(null)
   const [hydrated, setHydrated] = useState(false)
+  const [viewportMinH, setViewportMinH] = useState(520)
 
   const measure = useCallback(() => {
     const el = containerRef.current
@@ -56,17 +57,29 @@ export function EditorWorkspace({
   }, [measure])
 
   useEffect(() => {
-    if (hydrated || containerSize.w < 100) return
-    setWindows(loadEditorWindows(containerSize.w))
+    const updateViewportMin = () => {
+      setViewportMinH(Math.max(520, window.innerHeight - 180))
+    }
+    updateViewportMin()
+    window.addEventListener('resize', updateViewportMin)
+    return () => window.removeEventListener('resize', updateViewportMin)
+  }, [])
+
+  useEffect(() => {
+    if (hydrated || containerSize.w < 100 || viewportMinH < 100) return
+    setWindows(loadEditorWindows(containerSize.w, viewportMinH))
     setHydrated(true)
-  }, [containerSize.w, hydrated])
+  }, [containerSize.w, viewportMinH, hydrated])
 
   useEffect(() => {
     if (!hydrated || !windows) return
     localStorage.setItem(EDITOR_WINDOWS_STORAGE_KEY, JSON.stringify(windows))
   }, [windows, hydrated])
 
-  const workspaceHeight = windows ? workspaceHeightFor(windows) : 360
+  const workspaceHeight = Math.max(
+    viewportMinH,
+    windows ? workspaceHeightFor(windows, viewportMinH) : viewportMinH,
+  )
 
   useEffect(() => {
     setContainerSize((prev) => ({ ...prev, h: workspaceHeight }))
@@ -92,31 +105,25 @@ export function EditorWorkspace({
   }, [])
 
   const resetLayout = () => {
-    const next = defaultEditorWindows(containerSize.w)
+    const next = defaultEditorWindows(containerSize.w, workspaceHeight)
     setWindows(next)
   }
 
   return (
-    <div className="space-y-3" ref={containerRef}>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <p className="text-xs text-slate-500 m-0 flex items-center gap-1.5">
-          <LayoutGrid className="w-3.5 h-3.5 text-slate-600" />
-          {ui.editorWorkspaceHint}
-        </p>
+    <div ref={containerRef}>
+      <div
+        className="relative w-full rounded-2xl border border-dashed border-white/[0.08] bg-[#050810]/50 overflow-hidden"
+        style={{ height: workspaceHeight, minHeight: viewportMinH }}
+      >
         <button
           type="button"
           onClick={resetLayout}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:bg-white/[0.04] transition-colors"
+          className="absolute top-2 right-2 z-20 inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-200 px-2 py-1 rounded-md border border-white/[0.06] bg-[#0a0f1a]/80 hover:bg-white/[0.06] transition-colors"
+          title={ui.editorResetLayout}
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          {ui.editorResetLayout}
+          <RotateCcw className="w-3 h-3" />
+          <span className="hidden sm:inline">{ui.editorResetLayout}</span>
         </button>
-      </div>
-
-      <div
-        className="relative w-full rounded-2xl border border-dashed border-white/[0.08] bg-[#050810]/50 overflow-hidden"
-        style={{ height: workspaceHeight, minHeight: 360 }}
-      >
         {!hydrated || !windows ? (
           <div className="absolute inset-0 animate-pulse bg-white/[0.02]" aria-hidden />
         ) : (

@@ -14,13 +14,13 @@ export type EditorWindowsState = {
 }
 
 /** Bump when default layout changes (clears old overlapping positions). */
-export const EDITOR_WINDOWS_STORAGE_KEY = 'code-migration-editor-windows-v2'
+export const EDITOR_WINDOWS_STORAGE_KEY = 'code-migration-editor-windows-v3'
 
 const MIN_W = 240
 const MIN_H = 180
 const PAD = 12
 const GAP = 12
-const DEFAULT_WINDOW_H = 280
+const DEFAULT_WINDOW_H = 460
 const STACK_BREAKPOINT = 760
 
 export function getEditorMinSize() {
@@ -35,20 +35,23 @@ function rectsOverlap(a: EditorWindowRect, b: EditorWindowRect): boolean {
   return a.x < bx2 && ax2 > b.x && a.y < by2 && ay2 > b.y
 }
 
-export function defaultEditorWindows(containerWidth: number): EditorWindowsState {
+export function defaultEditorWindows(
+  containerWidth: number,
+  containerHeight = 520,
+): EditorWindowsState {
   const usable = Math.max(MIN_W * 2 + GAP, containerWidth - PAD * 2)
+  const h = Math.max(MIN_H, Math.min(DEFAULT_WINDOW_H, containerHeight - PAD * 2 - 8))
 
   if (usable < STACK_BREAKPOINT) {
     const w = usable
-    const h = Math.min(DEFAULT_WINDOW_H, 240)
+    const stackH = Math.min(h, Math.floor((containerHeight - PAD * 2 - GAP) / 2))
     return {
-      source: { x: PAD, y: PAD, w, h, z: 1 },
-      result: { x: PAD, y: PAD + h + GAP, w, h, z: 2 },
+      source: { x: PAD, y: PAD, w, h: stackH, z: 1 },
+      result: { x: PAD, y: PAD + stackH + GAP, w, h: stackH, z: 2 },
     }
   }
 
   const half = Math.floor((usable - GAP) / 2)
-  const h = DEFAULT_WINDOW_H
   return {
     source: { x: PAD, y: PAD, w: Math.max(MIN_W, half), h, z: 1 },
     result: { x: PAD + half + GAP, y: PAD, w: Math.max(MIN_W, half), h, z: 2 },
@@ -75,23 +78,23 @@ export function normalizeEditorWindows(
     return def
   }
   return {
-    source: clampRectToContainer(source, containerWidth, workspaceHeightFor(merged)),
-    result: clampRectToContainer(result, containerWidth, workspaceHeightFor(merged)),
+    source: clampRectToContainer(source, containerWidth, workspaceHeightFor(merged, 520)),
+    result: clampRectToContainer(result, containerWidth, workspaceHeightFor(merged, 520)),
   }
 }
 
-export function workspaceHeightFor(windows: EditorWindowsState): number {
+export function workspaceHeightFor(windows: EditorWindowsState, minHeight = 520): number {
   const bottom = Math.max(windows.source.y + windows.source.h, windows.result.y + windows.result.h)
-  return Math.max(360, bottom + PAD + 8)
+  return Math.max(minHeight, bottom + PAD + 8)
 }
 
-export function loadEditorWindows(containerWidth: number): EditorWindowsState {
-  if (typeof window === 'undefined') return defaultEditorWindows(containerWidth)
+export function loadEditorWindows(containerWidth: number, containerHeight = 520): EditorWindowsState {
+  if (typeof window === 'undefined') return defaultEditorWindows(containerWidth, containerHeight)
   try {
     const raw = localStorage.getItem(EDITOR_WINDOWS_STORAGE_KEY)
-    if (!raw) return defaultEditorWindows(containerWidth)
+    if (!raw) return defaultEditorWindows(containerWidth, containerHeight)
     const parsed = JSON.parse(raw) as Partial<EditorWindowsState>
-    const fallback = defaultEditorWindows(containerWidth)
+    const fallback = defaultEditorWindows(containerWidth, containerHeight)
     const fix = (r: Partial<EditorWindowRect> | undefined, fb: EditorWindowRect): EditorWindowRect => ({
       x: typeof r?.x === 'number' ? r.x : fb.x,
       y: typeof r?.y === 'number' ? r.y : fb.y,
@@ -107,7 +110,7 @@ export function loadEditorWindows(containerWidth: number): EditorWindowsState {
       containerWidth,
     )
   } catch {
-    return defaultEditorWindows(containerWidth)
+    return defaultEditorWindows(containerWidth, containerHeight)
   }
 }
 
