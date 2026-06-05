@@ -8,6 +8,7 @@ class Language(str, Enum):
     PYTHON = "python"
     TYPESCRIPT = "typescript"
     COBOL = "cobol"
+    GO = "go"
 
 
 class ConversionDirection(str, Enum):
@@ -17,6 +18,10 @@ class ConversionDirection(str, Enum):
     TYPESCRIPT_TO_JAVA = "typescript_to_java"
     COBOL_TO_JAVA = "cobol_to_java"
     JAVA_TO_COBOL = "java_to_cobol"
+    GO_TO_PYTHON = "go_to_python"
+    PYTHON_TO_GO = "python_to_go"
+    GO_TO_JAVA = "go_to_java"
+    JAVA_TO_GO = "java_to_go"
 
     @property
     def source(self) -> Language:
@@ -33,6 +38,7 @@ class ConversionDirection(str, Enum):
             Language.PYTHON: "Python",
             Language.TYPESCRIPT: "TypeScript",
             Language.COBOL: "COBOL",
+            Language.GO: "Go",
         }
         return f"{labels[self.source]} \u2192 {labels[self.target]}"
 

@@ -1,4 +1,4 @@
-export type Language = 'java' | 'python' | 'typescript' | 'cobol'
+export type Language = 'java' | 'python' | 'typescript' | 'cobol' | 'go'
 
 export type DirectionId =
   | 'java_to_python'
@@ -7,6 +7,10 @@ export type DirectionId =
   | 'typescript_to_java'
   | 'cobol_to_java'
   | 'java_to_cobol'
+  | 'go_to_python'
+  | 'python_to_go'
+  | 'go_to_java'
+  | 'java_to_go'
 
 export type DirectionInfo = {
   id: DirectionId
@@ -87,6 +91,7 @@ export const LANG_META: Record<Language, { label: string; color: string; icon: s
   python: { label: 'Python', color: '#3776ab', icon: '??' },
   typescript: { label: 'TypeScript', color: '#3178c6', icon: 'TS' },
   cobol: { label: 'COBOL', color: '#0051a5', icon: 'CB' },
+  go: { label: 'Go', color: '#00ADD8', icon: 'Go' },
 }
 
 export const SAMPLE_CODE: Partial<Record<DirectionId, string>> = {
@@ -125,4 +130,45 @@ class Greeter:
            ADD WS-A TO WS-B GIVING WS-SUM.
            DISPLAY WS-SUM.
            STOP RUN.`,
+  go_to_python: `package main
+
+import "fmt"
+
+type Greeter struct {
+    Name string
+}
+
+func (g Greeter) Greet() string {
+    return fmt.Sprintf("Hello, %s", g.Name)
+}`,
+  python_to_go: `from dataclasses import dataclass
+
+@dataclass
+class Greeter:
+    name: str
+
+    def greet(self) -> str:
+        return f"Hello, {self.name}"`,
+  go_to_java: `package main
+
+import "fmt"
+
+type Greeter struct {
+    Name string
+}
+
+func (g Greeter) Greet() string {
+    return fmt.Sprintf("Hello, %s", g.Name)
+}`,
+  java_to_go: `public class Greeter {
+    private final String name;
+
+    public Greeter(String name) {
+        this.name = name;
+    }
+
+    public String greet() {
+        return "Hello, " + name;
+    }
+}`,
 }

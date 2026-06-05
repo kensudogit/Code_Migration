@@ -14,6 +14,7 @@ def _mock_convert(direction: ConversionDirection, source_code: str) -> Conversio
         Language.PYTHON: "# Converted (mock)",
         Language.TYPESCRIPT: "// Converted (mock)",
         Language.COBOL: "      * Converted (mock)",
+        Language.GO: "// Converted (mock)",
     }[direction.target]
     note = (
         f"{header}\n"
@@ -32,6 +33,13 @@ def _mock_convert(direction: ConversionDirection, source_code: str) -> Conversio
         )
     elif direction.target == Language.TYPESCRIPT:
         code = note + f"// Original:\n/*\n{source_code.strip()}\n*/\nexport {{}};\n"
+    elif direction.target == Language.GO:
+        code = (
+            note
+            + f"package main\n\n"
+            + f"// Original {direction.source.value} source preserved in comment block\n"
+            + f"/*\n{source_code.strip()}\n*/\n"
+        )
     else:
         code = note + f"      * Original preserved below\n      * (see full source in comment block)\n/*\n{source_code.strip()}\n*/\n"
 

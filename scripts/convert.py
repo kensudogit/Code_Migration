@@ -24,7 +24,11 @@ async def run(args: argparse.Namespace) -> int:
     else:
         direction = resolve_direction(Language(args.from_lang), Language(args.to_lang))
     if direction is None:
-        print("Unsupported pair. Use: java python | python java | java typescript | typescript java | cobol java | java cobol", file=sys.stderr)
+        print(
+            "Unsupported pair. Use: java python | python java | go python | python go | "
+            "go java | java go | java typescript | typescript java | cobol java | java cobol",
+            file=sys.stderr,
+        )
         return 1
 
     source = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
@@ -82,8 +86,8 @@ async def run(args: argparse.Namespace) -> int:
 def main() -> None:
     p = argparse.ArgumentParser(description="AI code conversion CLI")
     p.add_argument("--direction", choices=[d.value for d in ConversionDirection], help="e.g. java_to_python")
-    p.add_argument("--from", dest="from_lang", choices=["java", "python", "typescript", "cobol"])
-    p.add_argument("--to", dest="to_lang", choices=["java", "python", "typescript", "cobol"])
+    p.add_argument("--from", dest="from_lang", choices=["java", "python", "typescript", "cobol", "go"])
+    p.add_argument("--to", dest="to_lang", choices=["java", "python", "typescript", "cobol", "go"])
     p.add_argument("-f", "--file", type=argparse.FileType("r", encoding="utf-8"))
     p.add_argument("--json", action="store_true")
     p.add_argument("--no-save", action="store_true", help="Skip PostgreSQL history")

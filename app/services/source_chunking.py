@@ -51,5 +51,6 @@ def merge_converted_chunks(parts: list[str], target: str) -> str:
         "java": "\n\n// --- continued ---\n\n",
         "typescript": "\n\n// --- continued ---\n\n",
         "cobol": "\n      * --- continued ---\n",
+        "go": "\n\n// --- continued ---\n\n",
     }.get(target, "\n\n/* --- continued --- */\n\n")
     return sep.join(p.strip("\n") for p in parts if p.strip())

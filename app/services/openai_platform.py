@@ -52,6 +52,22 @@ DIRECTION_HINTS: dict[ConversionDirection, str] = {
     ConversionDirection.JAVA_TO_COBOL: (
         "Convert Java to COBOL with IDENTIFICATION and DATA DIVISION structure."
     ),
+    ConversionDirection.GO_TO_PYTHON: (
+        "Convert Go 1.21+ to Python 3. Use type hints; map structs to dataclasses where appropriate. "
+        "Replace goroutines with threading or asyncio when needed; map errors to exceptions."
+    ),
+    ConversionDirection.PYTHON_TO_GO: (
+        "Convert Python 3 to Go 1.21+. Use idiomatic Go packages; map classes to structs with methods. "
+        "Return errors explicitly; use slices and maps instead of Python lists/dicts where natural."
+    ),
+    ConversionDirection.GO_TO_JAVA: (
+        "Convert Go 1.21+ to Java 17+. Map structs to classes or records; map interfaces to Java interfaces. "
+        "Replace goroutines with ExecutorService or virtual threads where appropriate; map errors to exceptions."
+    ),
+    ConversionDirection.JAVA_TO_GO: (
+        "Convert Java 17+ to Go 1.21+. Map classes to structs with methods; use explicit error returns. "
+        "Prefer slices and maps; translate streams to loops or functional helpers idiomatic in Go."
+    ),
 }
 
 CONVERSION_JSON_SCHEMA = {

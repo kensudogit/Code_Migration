@@ -15,6 +15,7 @@ import { convertCode, getDirections, getHealth, listJobs } from '@/lib/api'
 import type { ConvertResponse, DirectionId, DirectionInfo, HealthResponse, JobSummary } from '@/lib/types'
 import { SAMPLE_CODE } from '@/lib/types'
 import { ui } from '@/lib/ui'
+import { loadRemotePanelState } from '@/lib/remotePanel'
 import { DirectionRemoteModal } from '@/components/DirectionRemoteModal'
 import { EditorWorkspace } from '@/components/EditorWorkspace'
 import { HistoryPanel } from '@/components/HistoryPanel'
@@ -39,6 +40,7 @@ export function MigrationStudio() {
   const [progress, setProgress] = useState<string | null>(null)
   const [autoDirectionNote, setAutoDirectionNote] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(true)
+  const [directionRemoteOpen, setDirectionRemoteOpen] = useState(true)
 
   const refreshMeta = useCallback(async () => {
     const [h, dirs, j] = await Promise.all([getHealth(), getDirections(), listJobs(12)])
@@ -51,6 +53,10 @@ export function MigrationStudio() {
     refreshMeta().catch(() => setHealth({ ok: false, postgres: false, ai_enabled: false }))
   }, [refreshMeta])
 
+  useEffect(() => {
+    setDirectionRemoteOpen(!loadRemotePanelState().minimized)
+  }, [])
+
   const onDirectionChange = (id: DirectionId) => {
     setDirection(id)
     setSource(SAMPLE_CODE[id] ?? '')
@@ -60,8 +66,38 @@ export function MigrationStudio() {
   }
 
   const looksLikePython =
-    direction === 'java_to_python' &&
+    (direction === 'java_to_python' || direction === 'go_to_python') &&
     /^\s*(#|"""|'''|from |import |def |async def |class )/m.test(source.slice(0, 800))
+
+  const looksLikeGo =
+    (direction === 'python_to_go' || direction === 'java_to_go') &&
+    /^\s*(import "|func |type [A-Za-z_][\w]* struct|go func)/m.test(source.slice(0, 800)) &&
+    !/^\s*package [\w.]+;/m.test(source.slice(0, 800))
+
+  const looksLikeJava =
+    direction === 'go_to_java' &&
+    /^\s*(package [\w.]+;|import java\.|public (class|interface|record|enum)|@Override|@Service)/m.test(
+      source.slice(0, 800),
+    )
+
+  const resolveEffectiveDirection = (): { id: DirectionId; note: string | null } => {
+    if (looksLikePython && direction === 'java_to_python') {
+      return { id: 'python_to_java', note: ui.autoDirectionNote }
+    }
+    if (looksLikePython && direction === 'go_to_python') {
+      return { id: 'python_to_go', note: ui.autoDirectionPythonToGo }
+    }
+    if (looksLikeGo && direction === 'python_to_go') {
+      return { id: 'go_to_python', note: ui.autoDirectionGoToPython }
+    }
+    if (looksLikeGo && direction === 'java_to_go') {
+      return { id: 'go_to_java', note: ui.autoDirectionGoToJava }
+    }
+    if (looksLikeJava && direction === 'go_to_java') {
+      return { id: 'java_to_go', note: ui.autoDirectionJavaToGo }
+    }
+    return { id: direction, note: null }
+  }
 
   const onConvert = async () => {
     if (!source.trim()) {
@@ -72,10 +108,9 @@ export function MigrationStudio() {
     setError(null)
     setProgress(null)
     setAutoDirectionNote(null)
-    const effectiveDirection: DirectionId =
-      looksLikePython && direction === 'java_to_python' ? 'python_to_java' : direction
-    if (effectiveDirection !== direction) {
-      setAutoDirectionNote(ui.autoDirectionNote)
+    const { id: effectiveDirection, note } = resolveEffectiveDirection()
+    if (note) {
+      setAutoDirectionNote(note)
     }
     try {
       const res = await convertCode(effectiveDirection, source, setProgress)
@@ -132,6 +167,16 @@ export function MigrationStudio() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {!directionRemoteOpen && (
+                <button
+                  type="button"
+                  onClick={() => setDirectionRemoteOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/35 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-500/25 transition-colors"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  {ui.remoteOpen}
+                </button>
+              )}
               <SaaSPanel />
               <StatusPills health={health} mockMode={mockMode && !!result} />
             </div>
@@ -185,6 +230,14 @@ export function MigrationStudio() {
 
             {looksLikePython && !loading && !autoDirectionNote && (
               <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintPython}</p>
+            )}
+
+            {looksLikeGo && !loading && !autoDirectionNote && (
+              <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintGo}</p>
+            )}
+
+            {looksLikeJava && !loading && !autoDirectionNote && (
+              <p className="text-xs text-amber-300/90 m-0 px-1">{ui.directionHintJava}</p>
             )}
 
             {autoDirectionNote && !loading && (
@@ -276,6 +329,8 @@ export function MigrationStudio() {
         directions={directions}
         selected={direction}
         onSelect={onDirectionChange}
+        open={directionRemoteOpen}
+        onOpenChange={setDirectionRemoteOpen}
       />
       <FloatingGuidePanel />
     </div>

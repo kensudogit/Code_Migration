@@ -12,6 +12,10 @@ Python + PostgreSQL + **Next.js** AI code conversion studio.
 | TypeScript ? Java | `typescript_to_java` |
 | COBOL ? Java | `cobol_to_java` |
 | Java ? COBOL | `java_to_cobol` |
+| Go ? Python | `go_to_python` |
+| Python ? Go | `python_to_go` |
+| Go ? Java | `go_to_java` |
+| Java ? Go | `java_to_go` |
 
 ## Quick start (Docker ? recommended)
 

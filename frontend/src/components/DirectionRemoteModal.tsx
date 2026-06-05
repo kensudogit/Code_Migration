@@ -1,6 +1,6 @@
 'use client'
 
-import { GripVertical, Radio, Sparkles, X } from 'lucide-react'
+import { ChevronUp, GripVertical, Radio, Sparkles, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { displayDirectionLabel, formatDirectionLabel } from '@/lib/directionFormat'
 import { clampFloatingPosition } from '@/lib/floatingPosition'
@@ -22,6 +22,10 @@ const FALLBACK_DIRECTIONS: DirectionInfo[] = (
     { id: 'typescript_to_java' as const, source: 'typescript' as const, target: 'java' as const },
     { id: 'cobol_to_java' as const, source: 'cobol' as const, target: 'java' as const },
     { id: 'java_to_cobol' as const, source: 'java' as const, target: 'cobol' as const },
+    { id: 'go_to_python' as const, source: 'go' as const, target: 'python' as const },
+    { id: 'python_to_go' as const, source: 'python' as const, target: 'go' as const },
+    { id: 'go_to_java' as const, source: 'go' as const, target: 'java' as const },
+    { id: 'java_to_go' as const, source: 'java' as const, target: 'go' as const },
   ] as const
 ).map((d) => ({
   id: d.id,
@@ -34,10 +38,19 @@ type Props = {
   directions: DirectionInfo[]
   selected: DirectionId
   onSelect: (id: DirectionId) => void
+  /** When set, parent can reopen the panel (e.g. header button). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /** Draggable floating modal for conversion direction (6-card grid). */
-export function DirectionRemoteModal({ directions, selected, onSelect }: Props) {
+export function DirectionRemoteModal({
+  directions,
+  selected,
+  onSelect,
+  open: openControlled,
+  onOpenChange,
+}: Props) {
   const items = directions.length > 0 ? directions : FALLBACK_DIRECTIONS
   const current = items.find((d) => d.id === selected) ?? items[0]
 
@@ -46,14 +59,32 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
   const panelRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
 
+  const isOpen = openControlled !== undefined ? openControlled : !state.minimized
+
+  const setOpen = useCallback(
+    (open: boolean) => {
+      setState((s) => ({ ...s, minimized: !open }))
+      onOpenChange?.(open)
+    },
+    [onOpenChange],
+  )
+
   useEffect(() => {
     const loaded = loadRemotePanelState()
     if (typeof window !== 'undefined' && loaded.y < 72) {
       loaded.y = 88
     }
-    setState(loaded)
+    const startOpen = openControlled !== undefined ? openControlled : !loaded.minimized
+    setState({ ...loaded, minimized: !startOpen })
+    onOpenChange?.(startOpen)
     setHydrated(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [])
+
+  useEffect(() => {
+    if (openControlled === undefined || !hydrated) return
+    setState((s) => ({ ...s, minimized: !openControlled }))
+  }, [openControlled, hydrated])
 
   useEffect(() => {
     if (!hydrated) return
@@ -115,30 +146,24 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
 
   if (!hydrated) return null
 
-  if (state.minimized) {
+  if (!isOpen) {
     return (
-      <div
-        ref={panelRef}
-        className="fixed z-[190]"
-        style={{ left: state.x, top: state.y }}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="direction-remote-floating fixed z-[200] bottom-6 left-6 flex items-center gap-2.5 rounded-full border border-violet-500/40 bg-violet-600/95 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-violet-500 hover:border-violet-400/60 transition-colors"
+        aria-label={ui.remoteReopenFab}
+        title={ui.remoteReopenFab}
       >
-        <button
-          type="button"
-          onClick={() => setState((s) => ({ ...s, minimized: false }))}
-          className="direction-remote-floating flex items-center gap-2 rounded-full border border-violet-500/30 bg-[#0f111a]/95 px-3 py-2 shadow-lg shadow-black/40 backdrop-blur-xl hover:border-violet-400/50 transition-colors"
-          aria-label={ui.remoteOpen}
-          title={ui.remoteTapToOpen}
-        >
-          <Radio className="h-4 w-4 text-violet-400 shrink-0" strokeWidth={2.5} />
-          {current && (
-            <span className="text-xs font-bold text-slate-200">
-              <LangBadge lang={current.source} />
-              <span className="text-slate-600 mx-1">{'\u2192'}</span>
-              <LangBadge lang={current.target} />
-            </span>
-          )}
-        </button>
-      </div>
+        <Radio className="h-4 w-4 text-white shrink-0" strokeWidth={2.5} />
+        <span className="text-sm font-bold text-white">{ui.remoteOpen}</span>
+        {current && (
+          <span className="hidden sm:inline text-xs font-semibold text-violet-200/90 border-l border-white/20 pl-2.5">
+            <DirectionColored source={current.source} target={current.target} />
+          </span>
+        )}
+        <ChevronUp className="h-4 w-4 text-white/80 shrink-0" aria-hidden />
+      </button>
     )
   }
 
@@ -168,9 +193,10 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
         <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{ui.selectDirection}</span>
         <button
           type="button"
-          onClick={() => setState((s) => ({ ...s, minimized: true }))}
+          onClick={() => setOpen(false)}
           className="shrink-0 p-1 rounded-md text-white/90 hover:bg-white/15 transition-colors"
           aria-label={ui.remoteClose}
+          title={ui.remoteClose}
         >
           <X className="w-4 h-4" strokeWidth={2.5} />
         </button>
@@ -190,6 +216,18 @@ export function DirectionRemoteModal({ directions, selected, onSelect }: Props) 
         </div>
       </div>
     </div>
+  )
+}
+
+function DirectionColored({ source, target }: { source: Language; target: Language }) {
+  const src = LANG_META[source]
+  const tgt = LANG_META[target]
+  return (
+    <span className="whitespace-nowrap">
+      <span style={{ color: src.color }}>{src.label}</span>
+      <span className="text-slate-500 mx-0.5">{'\u2192'}</span>
+      <span style={{ color: tgt.color }}>{tgt.label}</span>
+    </span>
   )
 }
 
@@ -219,7 +257,6 @@ function DirectionCard({
   onPick: () => void
 }) {
   const src = LANG_META[direction.source]
-  const tgt = LANG_META[direction.target]
   const accent = src.color
 
   return (
