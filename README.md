@@ -1,6 +1,44 @@
-# Code Migration
+# AI Code Migration Studio — Multi-Language Modernization
 
-Python + PostgreSQL + **Next.js** AI code conversion studio.
+> **AI-Assisted Code Modernization** — Java / Python / TypeScript / COBOL / Go間のコード変換を、AIとStructured Outputsで支援し、変換履歴・警告・トークン使用量まで管理するモダナイゼーション・スタジオです。
+>
+> **Stack:** Python · FastAPI · Next.js · React · PostgreSQL · OpenAI · Docker · Railway
+
+## Architecture
+
+```text
+Legacy / Existing Source Code
+            │
+            ▼
+     Next.js Migration UI
+            │
+            ▼
+       FastAPI Backend
+            │
+      conversion rules
+            +
+       AI conversion
+            │
+            ▼
+ Structured Output
+ code / warnings / notes
+            │
+            ▼
+ PostgreSQL Job History
+```
+
+## Engineering Focus
+
+- COBOL ↔ Javaを含む多言語コード変換
+- AI出力をJSON Schemaで拘束するStructured Outputs
+- 変換結果・警告・利用量・request IDの追跡
+- AI未設定時にも動作可能なmock構成
+- Docker / Railwayによる再現可能な実行環境
+- Legacy Modernization工程へのAI適用
+
+## Portfolio Context
+
+This repository is the **AI Code Modernization** component of the Legacy Modernization portfolio. It complements `cobol` as a language-mapping reference and `transplant` as a system-level mainframe migration architecture.
 
 ## Features
 
